@@ -1,6 +1,6 @@
 #ifndef __FILE_INFO__
 #define __FILE_INFO__
-#define NAME_LEN 50
+#define NAME_LEN 1024
 
 typedef struct FileInfoPacket
 {

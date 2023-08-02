@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
 	// 클라이언트가 선택한 파일읽고 내용 전송
 	read(clnt_sock, message, BUF_SIZE);
-	printf("file name: '%s'\n", message);
+	printf("\nfile name: '%s'\n", message);
 	send_file_content(clnt_sock, message);
 	
 	shutdown(clnt_sock, SHUT_WR);
@@ -102,16 +102,18 @@ void send_file_list(int clnt_sock)
 	dir = opendir ("./");
 	file = (FileInfoPacket *) malloc(sizeof(FileInfoPacket));
 	directory = (struct dirent*)malloc((int)sizeof(struct dirent) * 100);
+	int write_len = 0;
 
 	if (dir != NULL) {
 		//  실행 중인 디렉토리의 모든 파일 목록 (파일 이름, 파일 크기)을 클라이언트에게 전송 
 		while ((directory = readdir(dir)) != NULL) {
 			if (directory->d_type == DT_REG) {
-				printf ("%s\n", directory->d_name);
 				strcpy(file->name, directory->d_name);
 				file->size = filesize(directory->d_name);
+				printf ("%s %d\n", directory->d_name, file->size);
 
-				write(clnt_sock, file, sizeof(FileInfoPacket));
+				write_len = write(clnt_sock, file, sizeof(FileInfoPacket));
+				// printf("write_len: %d\n", write_len);
 				i++;
 			}
 		}

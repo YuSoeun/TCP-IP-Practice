@@ -59,7 +59,6 @@ int main(int argc, char *argv[])
 
 	// 서버에서 받아온 파일 저장
 	read_and_save_file(sock, filename);
-
 	printf("%s is saved.\n", filename);
 	
 	close(sock);
@@ -93,13 +92,21 @@ int open_socket(char *argv[])
 FileInfoPacket* read_file_list(int clnt_sock)
 {
 	FileInfoPacket* file;
-	int recv_cnt, recv_len = 0;
+	int recv_cnt, recv_len = 0, buffer;
 	char temp[BUF_SIZE] = {0};
 
 	file = (FileInfoPacket*)malloc((int)sizeof(FileInfoPacket));
 	
 	while ((recv_cnt = read(clnt_sock, file, sizeof(FileInfoPacket))) != 0) {
+		// printf("\npacket size: %d\n", recv_cnt);
 		printf("name: %s, size: %d\n", file->name, file->size);
+
+		// sizeof(FileInfoPacket)만큼 읽어들이지 못했다면 
+		while (recv_cnt < sizeof(FileInfoPacket)) {
+			buffer = read(clnt_sock, temp, sizeof(FileInfoPacket) - recv_cnt);
+			// printf("buffer[%dbyte]: %s\n", buffer, temp);
+			recv_cnt += buffer;
+		}
 	}
 	printf("\n");
 
