@@ -20,11 +20,14 @@
 #include "trim.h"
 
 #define BUF_SIZE 1024
-#define FLIST_SIZE 30
+#define FLIST_SIZE 100
 int open_socket(char *argv[]);
 void error_handling(char *message);
+
 int read_file_list(int sock, FileInfoPacket **files);
 int read_and_save_file(int sock, char* filename);
+void send_file_content(int sock, char *filename);
+
 void print_file_list(FileInfoPacket **files, int file_cnt);
 void print_directories(FileInfoPacket **files, int file_cnt);
 void print_files(FileInfoPacket **files, int file_cnt);
@@ -50,12 +53,11 @@ int main(int argc, char *argv[])
 	
 	sock = open_socket(argv);
 	
-	// 디렉토리의 모든 파일 목록 받기
-	fputs("서버 디렉토리의 파일 목록 확인하기 (yes to continue): ", stdout);
-	fgets(message, BUF_SIZE, stdin);
-	write(sock, message, strlen(message));
-	
 	while (1) {
+		// 디렉토리의 모든 파일 목록 받기
+		strcpy(message, "start");
+		write(sock, message, BUF_SIZE);
+
 		recv_cnt = read(sock, dirname, NAME_LEN);
 		while (recv_cnt < NAME_LEN) {
 			recv_cnt += read(sock, &dirname[recv_cnt], NAME_LEN - recv_cnt);
@@ -86,24 +88,25 @@ int main(int argc, char *argv[])
 			printf("%d을 선택하였습니다.\n", file_num);
 			write(sock, files[file_num], sizeof(FileInfoPacket));
 
-			read_and_save_file(sock, files[file_num]);
-			printf("%s is saved.\n", filename);
+			read_and_save_file(sock, files[file_num]->name);
+			printf("%s is saved.\n", files[file_num]->name);
+
+			break;
 		} else if (num == 3) {			// 3. 파일 업로드
 			fputs("\n업로드 할 파일 이름을 적어주세요: ", stdout);
 			scanf("%s", filename);
-			printf("%s을 업로드 하겠습니다.\n", filename);
-			strcpy(files[file_num]->name, filename);
-			strcpy(files[file_num]->type, "upload");
-			write(sock, files[file_num], sizeof(FileInfoPacket));
+			printf("'%s' 업로드를 시작합니다.\n", filename);
+			strcpy(files[0]->name, filename);
+			strcpy(files[0]->type, "upload");
+			write(sock, files[0], sizeof(FileInfoPacket));
+
+			send_file_content(sock, files[0]->name);
+			break;
 		} else if (num == 4) {
 			break;
 		}
-
 	}
 
-	// // 서버에서 받아온 파일 저장
-	
-	
 	close(sock);
 	return 0;
 }
@@ -142,7 +145,6 @@ int read_file_list(int sock, FileInfoPacket **files)
 		// sizeof(FileInfoPacket)만큼 읽어들이지 못했다면 
 		while (recv_cnt < sizeof(FileInfoPacket)) {
 			buffer = read(sock, temp, sizeof(FileInfoPacket) - recv_cnt);
-			// printf("buffer[%dbyte]: %s\n", buffer, temp);
 			recv_cnt += buffer;
 		}
 
@@ -199,20 +201,51 @@ int read_and_save_file(int sock, char* filename)
 	int recv_cnt, recv_len = 0;
 	FILE * fp;
 
-	// file open and read
+	// file open and write received content
 	if ((fp = fopen(filename, "wb")) == NULL) {
 		printf("Failed to open file.\n");
 		return 0;
 	} else {
 		while ((recv_cnt = read(sock, line, BUF_SIZE)) != 0) {
-			// printf("%s\n", line);
+			printf("%s\n", line);
+			if (strcmp(line, "eof") == 0)
+				break;
 			
 			fwrite(line, sizeof(char), recv_cnt, fp);
 		}
 	}
 	fclose(fp);
+	printf("fclose(fp);\n");
 
 	return 1;
+}
+
+/* send file content specific filename */
+void send_file_content(int sock, char *filename)
+{
+	FILE * fp;
+	char * result;
+	int line_size;
+	char input[BUF_SIZE];
+
+	printf("여기\n");
+
+	// file open and read
+	if ((fp = fopen(filename, "rb")) == NULL) {
+		printf("Failed to open file.\n");
+	} else {
+		printf("file content is\n");
+		
+		while (feof(fp) == 0) {
+			line_size = fread(input, 1, BUF_SIZE, fp);
+		
+			printf("%s\n", input);
+			strlen(input);
+			write(sock, input, line_size);
+		}
+	}
+	fclose(fp);
+	// close(sock);
 }
 
 void error_handling(char *message)
