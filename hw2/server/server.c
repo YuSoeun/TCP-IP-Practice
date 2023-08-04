@@ -15,7 +15,6 @@
 #include <time.h>
 #include "packet.h"
 
-// int get_file_list(packet** pkt_list);
 void error_handling(char *message);
 
 int main(int argc, char *argv[])
@@ -30,7 +29,6 @@ int main(int argc, char *argv[])
 	packet* pkt, *ack;
 
 	FILE * fp;
-	char * result;
 	char filename[MAX_BUF];
 	int line_size;
 	char input[MAX_BUF];
@@ -60,7 +58,7 @@ int main(int argc, char *argv[])
 	ack = (packet *) malloc(sizeof(packet));
 
 	clnt_adr_sz = sizeof(clnt_adr);
-	str_len = recvfrom(serv_sock, filename, 100, 0, 
+	str_len = recvfrom(serv_sock, filename, MAX_BUF, 0, 
 							(struct sockaddr*)&clnt_adr, &clnt_adr_sz);
 	printf("file name: %s\n", filename);
 
@@ -97,10 +95,8 @@ int main(int argc, char *argv[])
 				if (ack->seq < pkt->seq) {
 					printf("----loss----\n");
 				}
-				// printf("<ack> seq[%d]: '%s'\n", ack->seq, ack->data);	
 			}
 			if (i == 0) start = clock();
-			// if (i >= 4) break;
 			i++;
 			total_size += str_len;
 		}
