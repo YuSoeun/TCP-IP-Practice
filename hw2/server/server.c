@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 			input[line_size] = 0;
 		
 			pkt->seq = i;
+			// memcpy같은거 써야함 null값까지만 복사해서
 			strncpy(pkt->data, input, MAX_BUF);
 
 			str_len = -1;
