@@ -1,6 +1,6 @@
 #ifndef __FILE_INFO__
 #define __FILE_INFO__
-#define MAX_BUF 10
+#define MAX_BUF 30  // set buffer size 30 to test
 
 typedef struct packet
 {
