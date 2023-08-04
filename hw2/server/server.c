@@ -15,7 +15,7 @@
 #include <time.h>
 #include "packet.h"
 
-int get_file_list(packet** pkt_list);
+// int get_file_list(packet** pkt_list);
 void error_handling(char *message);
 
 int main(int argc, char *argv[])
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	printf("file name: %s\n", filename);
 
 	// set socket receive timeout: 50ms
-	struct timeval optVal = {0, 50};
+	struct timeval optVal = {0, 50000};
 	int optLen = sizeof(optVal);
 	setsockopt(serv_sock, SOL_SOCKET, SO_RCVTIMEO, &optVal, optLen);	
 	
@@ -73,25 +73,33 @@ int main(int argc, char *argv[])
 		printf("Failed to open file.\n");
 	} else {
 		// send and receive data
+		ack->seq = -1;
+
 		while (feof(fp) == 0) {
 			line_size = fread(input, 1, MAX_BUF-1, fp);
 			input[line_size] = 0;
+			// printf("\nline size: %d\n", line_size);
 		
 			pkt->seq = i;
-			strncpy(pkt->data, input, MAX_BUF);
+			memcpy(pkt->data, input, MAX_BUF);
+			pkt->data_size = line_size;
 
 			str_len = -1;
 			while (str_len == -1) {
 				clnt_adr_sz = sizeof(clnt_adr);
 				sendto(serv_sock, pkt, sizeof(packet), 0, 
 										(struct sockaddr*)&clnt_adr, clnt_adr_sz);
-				printf("<pkt> seq: [%d], data: %s\n", pkt->seq, pkt->data);	
+				printf("seq[%d]: '%s'\n", pkt->seq, pkt->data);	
 				
 				str_len = recvfrom(serv_sock, ack, sizeof(packet), 0, 
 										(struct sockaddr*)&clnt_adr, &clnt_adr_sz);
-				// printf("<ack> seq: [%d], data: %s\n", ack->seq, ack->data);	
+				if (ack->seq < pkt->seq) {
+					printf("----loss----\n");
+				}
+				// printf("<ack> seq[%d]: '%s'\n", ack->seq, ack->data);	
 			}
 			if (i == 0) start = clock();
+			// if (i >= 4) break;
 			i++;
 			total_size += str_len;
 		}
