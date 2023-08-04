@@ -5,6 +5,7 @@
 typedef struct packet
 {
     int seq;                // index
+    int data_size;          // data size
     char data[MAX_BUF];     // data
 } packet;
 

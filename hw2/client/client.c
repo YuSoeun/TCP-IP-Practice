@@ -10,7 +10,7 @@ void error_handling(char *message);
 
 int main(int argc, char *argv[])
 {
-	int sock;
+	int sock, pre_seq = -1;
 	char message[MAX_BUF];
 	int str_len = 1;
 	socklen_t adr_sz;
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	serv_adr.sin_port = htons(atoi(argv[2]));
 	
 	// get filename from user
-	fputs("'hi.txt' 파일이 있습니다.\n", stdout);
+	fputs("'hi.txt, 12.png' 파일이 있습니다.\n", stdout);
 	fputs("파일을 다운받으려면 파일 이름을 입력하시오: ", stdout);
 	scanf("%s", filename);
 	sendto(sock, filename, 100, 0, 
@@ -49,19 +49,22 @@ int main(int argc, char *argv[])
 		printf("Failed to open file.\n");
 		return 0;
 	} else {
-		while (str_len > 0) {	
+		while (str_len > 0) {
 			adr_sz = sizeof(from_adr);
 			
 			str_len = recvfrom(sock, pkt, sizeof(packet), 0, 
 						(struct sockaddr*)&from_adr, &adr_sz);
 			if (pkt->seq == -1) break;							// 파일 끝났음 의미
 			
-			printf("seq: %d, data: %s\n", pkt->seq, pkt->data);
+			printf("seq[%d]: '%s'\n", pkt->seq, pkt->data);
 			sendto(sock, pkt, sizeof(packet), 0, 
 						(struct sockaddr*)&serv_adr, sizeof(serv_adr));
-			
-			// printf("strlen: %d\n",  (int)strlen(pkt->data));
-			fwrite(pkt->data, sizeof(char), strlen(pkt->data), fp);
+
+			// 이전에 받았던 seq num이면 안쓰기
+			if (pre_seq < pkt->seq) {
+				fwrite(pkt->data, sizeof(char), pkt->data_size, fp);
+			}
+			pre_seq = pkt->seq;
 		}
 		fclose(fp);
 	}
