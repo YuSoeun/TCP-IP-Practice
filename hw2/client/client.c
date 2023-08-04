@@ -35,9 +35,10 @@ int main(int argc, char *argv[])
 	serv_adr.sin_port = htons(atoi(argv[2]));
 	
 	// get filename from user
-	fputs("'hi.txt' 파일이 있습니다.\n", stdout);
-	fputs("파일을 다운받으려면 파일 이름을 입력하시오: ", stdout);
+	printf("'hi.txt' 파일이 있습니다.\n");
+	printf("파일을 다운받으려면 파일 이름을 입력하시오: ");
 	scanf("%s", filename);
+	printf("'%s'", filename);
 	sendto(sock, filename, 100, 0, 
 				(struct sockaddr*)&serv_adr, sizeof(serv_adr));
 

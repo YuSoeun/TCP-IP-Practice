@@ -64,55 +64,55 @@ int main(int argc, char *argv[])
 							(struct sockaddr*)&clnt_adr, &clnt_adr_sz);
 	printf("file name: %s\n", filename);
 
-	// set socket receive timeout: 50ms
-	struct timeval optVal = {0, 50};
-	int optLen = sizeof(optVal);
-	setsockopt(serv_sock, SOL_SOCKET, SO_RCVTIMEO, &optVal, optLen);	
+	// // set socket receive timeout: 50ms
+	// struct timeval optVal = {0, 50};
+	// int optLen = sizeof(optVal);
+	// setsockopt(serv_sock, SOL_SOCKET, SO_RCVTIMEO, &optVal, optLen);	
 	
-	if ((fp = fopen(filename, "rb")) == NULL) {
-		printf("Failed to open file.\n");
-	} else {
-		// send and receive data
-		while (feof(fp) == 0) {
-			line_size = fread(input, 1, MAX_BUF-1, fp);
-			input[line_size] = 0;
+	// if ((fp = fopen(filename, "rb")) == NULL) {
+	// 	printf("Failed to open file.\n");
+	// } else {
+	// 	// send and receive data
+	// 	while (feof(fp) == 0) {
+	// 		line_size = fread(input, 1, MAX_BUF-1, fp);
+	// 		input[line_size] = 0;
 		
-			pkt->seq = i;
-			strncpy(pkt->data, input, MAX_BUF);
+	// 		pkt->seq = i;
+	// 		strncpy(pkt->data, input, MAX_BUF);
 
-			str_len = -1;
-			while (str_len == -1) {
-				clnt_adr_sz = sizeof(clnt_adr);
-				sendto(serv_sock, pkt, sizeof(packet), 0, 
-										(struct sockaddr*)&clnt_adr, clnt_adr_sz);
-				printf("<pkt> seq: [%d], data: %s\n", pkt->seq, pkt->data);	
+	// 		str_len = -1;
+	// 		while (str_len == -1) {
+	// 			clnt_adr_sz = sizeof(clnt_adr);
+	// 			sendto(serv_sock, pkt, sizeof(packet), 0, 
+	// 									(struct sockaddr*)&clnt_adr, clnt_adr_sz);
+	// 			printf("<pkt> seq: [%d], data: %s\n", pkt->seq, pkt->data);	
 				
-				str_len = recvfrom(serv_sock, ack, sizeof(packet), 0, 
-										(struct sockaddr*)&clnt_adr, &clnt_adr_sz);
-				// printf("<ack> seq: [%d], data: %s\n", ack->seq, ack->data);	
-			}
-			if (i == 0) start = clock();
-			i++;
-			total_size += str_len;
-		}
+	// 			str_len = recvfrom(serv_sock, ack, sizeof(packet), 0, 
+	// 									(struct sockaddr*)&clnt_adr, &clnt_adr_sz);
+	// 			// printf("<ack> seq: [%d], data: %s\n", ack->seq, ack->data);	
+	// 		}
+	// 		if (i == 0) start = clock();
+	// 		i++;
+	// 		total_size += str_len;
+	// 	}
 
-		// send -1 to notice EOF
-		pkt->seq = -1;
-		strcpy(pkt->data, "end");
-		sendto(serv_sock, pkt, sizeof(packet), 0, 
-										(struct sockaddr*)&clnt_adr, clnt_adr_sz);
-	}
-	end = clock();
+	// 	// send -1 to notice EOF
+	// 	pkt->seq = -1;
+	// 	strcpy(pkt->data, "end");
+	// 	sendto(serv_sock, pkt, sizeof(packet), 0, 
+	// 									(struct sockaddr*)&clnt_adr, clnt_adr_sz);
+	// }
+	// end = clock();
 	
-	fclose(fp);
-	close(serv_sock);
+	// fclose(fp);
+	// close(serv_sock);
 	
-	// calculate throutput
-	total_time = (double)(end - start) / CLOCKS_PER_SEC;
-	throughput = total_size/total_time;
-	printf("\ntotal_size : %f(MB)\n", total_size);
-	printf("total_time: %f(s)\n", total_time);
-	printf("throughput : %f (MB/s)\n", throughput);
+	// // calculate throutput
+	// total_time = (double)(end - start) / CLOCKS_PER_SEC;
+	// throughput = total_size/total_time;
+	// printf("\ntotal_size : %f(MB)\n", total_size);
+	// printf("total_time: %f(s)\n", total_time);
+	// printf("throughput : %f (MB/s)\n", throughput);
 	
 	return 0;
 }

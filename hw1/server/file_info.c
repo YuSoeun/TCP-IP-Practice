@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <error.h>
+// #include <error.h>
 #include <string.h>
 #include "file_info.h"
  
