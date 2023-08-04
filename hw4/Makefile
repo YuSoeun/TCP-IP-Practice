@@ -1,0 +1,11 @@
+server.out: server.o
+	gcc -o server.out server.o
+
+main.o: server.c
+	gcc -c -o server.o server.c
+ 
+client.out: client.o
+	gcc -o client.out client.o
+
+main.o: client.c
+	gcc -c -o client.o client.c
