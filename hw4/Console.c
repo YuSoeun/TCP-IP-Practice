@@ -3,11 +3,8 @@
 		This file is for Windows
 */
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
-
 
 #ifdef _WINDOWS
 // for windows
@@ -73,7 +70,6 @@ void MyPause()
 
 #endif	// _WINDOWS
 
-
 #if defined(_LINUX) || defined(_MAC)
 // for Mac or Linux
 
@@ -84,17 +80,20 @@ void MyPause()
 
 #include "Console.h"
 
+/* go to (int x, y) console */
 void gotoxy(int x,int y)
 {
     printf("%c[%d;%df",0x1B,y,x);
 }
 
+/* refresh console screen */
 void clrscr()
 {
 	fprintf(stdout, "\033[2J\033[0;0f");
 	fflush(stdout);
 }
 
+/* get window width */
 int getWindowWidth()
 {
 	struct winsize w;
@@ -103,6 +102,7 @@ int getWindowWidth()
 	return w.ws_col;
 }
 
+/* get window height */
 int getWindowHeight()
 {
 	struct winsize w;
@@ -111,6 +111,7 @@ int getWindowHeight()
 	return w.ws_row;
 }
 
+/* get char without waiting enter */
 int getch()
 {
 	int c = 0;
@@ -125,10 +126,10 @@ int getch()
 	c = getchar();
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
 
-
 	return c;
 }
 
+/* key 입력 여부 있으면 1, 없으면 0 */
 int kbhit(void)
 {
   struct termios oldt, newt;
@@ -155,6 +156,7 @@ int kbhit(void)
   return 0;
 }
 
+/* enable cursor in console */
 void EnableCursor(int enable)
 {
 	if(enable){
@@ -179,7 +181,9 @@ void MyPause()
 
 #endif 	// defined(_LINUX) || defined(_MAC)
 
+#include "Console.h"
 
+/* drow line with char */
 void DrawLine(int x1, int y1, int x2, int y2, char c)
 {
 	int dx = 0, dy = 0;
@@ -224,4 +228,3 @@ void swap(int *pa, int *pb)
 	*pa = *pb;
 	*pb = temp;
 }
-

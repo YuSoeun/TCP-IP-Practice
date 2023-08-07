@@ -10,8 +10,12 @@
        - 검색어가 중간에 나오거나 끝에 나오는 경우 고려 (kmp algorithim)
     4. 검색어에 해당되는 부분은 임의의 색깔
 */
+#include <stdio.h>
+#include "Console.h"
 
 int main()
 {
+    // DrawBorderline('-', '|');
+
     return 0;
 }

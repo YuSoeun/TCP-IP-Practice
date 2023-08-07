@@ -1,8 +1,8 @@
-server.out: main.o file_info.o trim.o
-	gcc -o server.out main.o file_info.o trim.o
+server.out: server.o file_info.o trim.o
+	gcc -o server.out server.o file_info.o trim.o
  
-main.o: server.c
-	gcc -c -o main.o server.c
+server.o: server.c
+	gcc -c -o server.o server.c
 
 file_info.o: file_info.h file_info.c
 	gcc -c -o file_info.o file_info.c
