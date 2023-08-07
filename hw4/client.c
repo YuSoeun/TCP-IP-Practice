@@ -11,7 +11,46 @@
     4. 검색어에 해당되는 부분은 임의의 색깔
 */
 
+#include "Console.h"
+
+#define BUF_SIZE 1024
+
 int main()
 {
+    char alpha;
+    char search_word[BUF_SIZE] = {};
+    int len = 0;
+
+    clrscr();
+
+    while (1) {
+        EnableCursor(0);
+        DrawBorderLine('-', '|', 5);
+        gotoxy(2, 4);
+        printf("연관 검색어 List");
+        
+        EnableCursor(1);
+        gotoxy(1, 1);
+        printf("\033[38;2;159;75;153mSearch Word: ");
+
+        // 사용자에게 char 입력
+        gotoxy(14, 1);
+        printf("\033[38;2;255;255;255m%s", search_word);
+        alpha = getch();
+        clrscr();
+        printf("%c", alpha);
+        
+        if (alpha == 127 || alpha == 8) {
+            len--;
+        } else { 
+            search_word[len++] = alpha;
+        }
+        search_word[len] = 0;
+        gotoxy(3, 6);
+        printf("word: %s", search_word);
+
+        // TODO: sever에게 검색어 보내기
+    }
+
     return 0;
 }

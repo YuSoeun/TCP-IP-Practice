@@ -5,74 +5,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#ifdef _WINDOWS
-// for windows
-
-#include <windows.h>
-
-#include "Console.h"
-
-void clrscr(void)		// clear the screen
-{
-	COORD Cur= {0, 0};
-	unsigned long dwLen = 0;
-
-	int width = getWindowWidth();
-	int height = getWindowHeight();
-	int size = width * height;
-
-	gotoxy(1, 1);
-	FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', size, Cur, &dwLen);
-	gotoxy(1, 1);
-}
-
-void gotoxy(int x, int y)	// move cursor to (x, y)
-{
-	COORD Pos = { (short)(x - 1), (short)(y - 1)};
-
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Pos);
-}
-
-int getWindowWidth()
-{
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &csbi);
-
-    return (int)(csbi.srWindow.Right - csbi.srWindow.Left + 1);
-}
-
-int getWindowHeight()
-{
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &csbi);
-
-    return (int)(csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
-}
-
-void EnableCursor(int enable)
-{
-    CONSOLE_CURSOR_INFO cursorInfo = { 0, };
-    cursorInfo.dwSize = 1;
-    cursorInfo.bVisible = enable;
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo);
-}
-
-void MySleep(int msec)
-{
-	Sleep(msec);
-}
-
-void MyPause()
-{
-	system("PAUSE");
-}
-
-#endif	// _WINDOWS
-
-#if defined(_LINUX) || defined(_MAC)
-// for Mac or Linux
-
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
@@ -179,10 +111,6 @@ void MyPause()
 	getchar();
 }
 
-#endif 	// defined(_LINUX) || defined(_MAC)
-
-#include "Console.h"
-
 /* drow line with char */
 void DrawLine(int x1, int y1, int x2, int y2, char c)
 {
@@ -220,6 +148,21 @@ void DrawLine(int x1, int y1, int x2, int y2, char c)
 			printf("%c", c);
 		}
 	}
+}
+
+/* drow border line with char */
+void DrawBorderLine(char c1, char c2, char y1)
+{
+	int max_width = getWindowWidth() - 1;
+	int max_height = getWindowHeight() - 1;
+
+	// 가로
+	DrawLine(0, y1, max_width, y1, c1);
+	DrawLine(0, max_height, max_width, max_height, c1);
+
+	// 세로
+	DrawLine(0, y1+1, 0, max_height-1, c2);
+	DrawLine(max_width, y1+1, max_width, max_height-1, c2);
 }
 
 void swap(int *pa, int *pb)
