@@ -20,6 +20,7 @@ void DrawLine(int x1, int y1, int x2, int y2, char c);
 void swap(int *pa, int *pb);
 
 void EnableCursor(int enable);
+void swap(int *pa, int *pb);
 
 void MySleep(int msec);
 void MyPause();
