@@ -29,11 +29,17 @@ Node* getNewNode(char c)
 
 int charToInt(char c)
 {
+    if (c == ' ') {
+        return 26;
+    }
     return c - 'a';
 }
 
 char intToChar(int i)
 {
+    if (i == 26) {
+        return ' ';
+    }
     return i + 'a';
 }
 
@@ -43,7 +49,6 @@ void insert(Trie* trie, char* str, int search_cnt)
 
     while (*str != 0){
         int index = charToInt(*str); // 문자열 일부 숫자로 변환
-        
         // child 새로 추가
         if (cur->child[index] == 0) {
             cur->child[index] = getNewNode(*str);
@@ -52,6 +57,7 @@ void insert(Trie* trie, char* str, int search_cnt)
         cur = cur->child[index];
         str++;
     }
+    
     cur->search_cnt = search_cnt;
     cur->isTerminal = 1;
 }
@@ -80,13 +86,10 @@ void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
 {
     int index = charToInt(*str);
    
-    // printf("str: %c, cur: %c\n", *str, cur->val);
-
     if (*str == 0) 
         isContain = 1;
 
     if (isContain && cur->isTerminal) {
-        // printf("cpy: %s\n", cur_word);
         memcpy(result[result_cnt], cur_word, BUF_SIZE);
         result_cnt++;
     }

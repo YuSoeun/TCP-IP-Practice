@@ -6,7 +6,7 @@
 #ifndef __TRIE_H__
 #define __TRIE_H__
 
-#define ALPHABET_SIZE 26    // TODO: space는 예외로 27
+#define ALPHABET_SIZE 27    // TODO: space는 예외로 27
 #define BUF_SIZE 1024
 #define WORD_CNT 100
 

@@ -9,6 +9,8 @@
        - TCP nodelay option 줘보기
        - 검색어가 중간에 나오거나 끝에 나오는 경우 고려 (kmp algorithim)
     4. 검색어에 해당되는 부분은 임의의 색깔
+
+	split: https://blog.naver.com/PostView.nhn?blogId=sooftware&logNo=221999680764
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,10 +25,6 @@
 #include "file.h"
 #include "trie.h"
 
-void * handle_clnt(void * arg);
-void send_msg(char * msg, int len, int clnt_sock);
-void error_handling(char * msg);
-
 #define BUF_SIZE 1024
 #define MAX_CLNT 256
 #define NAME_LEN 256
@@ -35,6 +33,12 @@ int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
 pthread_mutex_t mutx;
 
+void * handle_clnt(void * arg);
+void send_msg(char * msg, int len, int clnt_sock);
+void error_handling(char * msg);
+char** split(char* str, const char* delimiter, int* count);
+void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie);
+
 int main(int argc, char *argv[])
 {
     // Multi-Thread로 서버 구현 (TCP nodelay socket option 주기)
@@ -42,10 +46,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in serv_adr, clnt_adr;
 	int clnt_adr_sz;
 	pthread_t t_id;
-
-	char filename[NAME_LEN];
 	char ** result;
-	FILE * fp;
 
 	if(argc != 3) {
 		printf("Usage : %s <port> <file name>\n", argv[0]);
@@ -66,8 +67,9 @@ int main(int argc, char *argv[])
 	// 	error_handling("listen() error");
 
 	// TODO: 파일 가져와 읽고 Trie structure로 저장
-
 	Trie *trie = getNewTrie();
+	openFileAndSaveTrie(argv[2], trie);
+
 	insert(trie, "hello", 100);
     printf("%d ", search(trie, "hello"));       // 1을 출력
  
@@ -76,19 +78,20 @@ int main(int argc, char *argv[])
     printf("%d ", search(trie, "world"));  // 0을 출력
     printf("\n");  // 0을 출력
 
-	result = getStringsContainChar(trie, "hello");
+	//TODO: lower
+	result = getStringsContainChar(trie, "pohang");
 	printf("cnt: %d\n", trie->rslt_cnt);
 
 	for (int i = 0; i < trie->rslt_cnt; i++) {
 		printf("content: %s\n", result[i]);
 	}
 
-	result = getStringsContainChar(trie, "world");
-	printf("cnt: %d\n", trie->rslt_cnt);
+	// result = getStringsContainChar(trie, "world");
+	// printf("cnt: %d\n", trie->rslt_cnt);
 
-	for (int i = 0; i < trie->rslt_cnt; i++) {
-		printf("content: %s\n", result[i]);
-	}
+	// for (int i = 0; i < trie->rslt_cnt; i++) {
+	// 	printf("content: %s\n", result[i]);
+	// }
  
 	// while(1)
 	// {
@@ -151,4 +154,54 @@ void error_handling(char * msg)
 	fputs(msg, stderr);
 	fputc('\n', stderr);
 	exit(1);
+}
+
+void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie)
+{
+	char **split_line;
+	FILE * fp;
+	char line[BUF_SIZE];
+	char data[BUF_SIZE];
+	int count;
+
+	if ((fp = fopen(filename, "rb")) == NULL) {
+		printf("Failed to open file.\n");
+	} else {
+		printf("file content is\n");
+		
+		while (feof(fp) == 0) {
+			count = 0;
+			fgets(line, BUF_SIZE, fp);
+			split_line = split(line, " ", &count);
+			
+			strcpy(data, split_line[0]);
+			for (int i = 1; i < count-1; i++) {
+				strcat(data, " ");
+				strcat(data, split_line[i]);
+			}
+			strncat(data, "\0", 1);
+			printf("data: %s\n", data);
+			insert(trie, data, atoi(split_line[count-1]));
+		}
+	}
+}
+
+char** split(char* str, const char* delimiter, int* count) {
+    int i, j, len;
+    char* token;
+    char** result = NULL;
+
+    // 구분자로 문자열을 분리한 후, 문자열 개수(count)를 구합니다.
+    token = strtok(str, delimiter);
+    while (token != NULL) {
+        (*count)++;
+        result = (char**)realloc(result, (*count) * sizeof(char*));
+        result[(*count) - 1] = token;
+        token = strtok(NULL, delimiter);
+    }
+
+    // 문자열 개수(count)만큼의 문자열 배열을 동적으로 할당합니다.
+    result = (char**)realloc(result, (*count) * sizeof(char*));
+
+    return result;
 }
