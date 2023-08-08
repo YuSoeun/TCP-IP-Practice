@@ -23,7 +23,6 @@
 #include <ctype.h>
 
 #include "Console.h"
-#include "file.h"
 #include "trie.h"
 
 #define MAX_CLNT 256
@@ -143,6 +142,9 @@ void send_msg(Result ** result, int count, int clnt_sock)   // send to all
 
 	send_len = write(clnt_sock, &count, sizeof(int));
 	printf("count: %d\n", count);
+	if (count > 10) {
+		count = 10;
+	}
 	for (int i = 0; i < count; i++) {
 		sprintf(line, "%d. %-30s	(%d)", i+1, result[i]->word, result[i]->cnt);
 		printf("line: %s\n", line);
