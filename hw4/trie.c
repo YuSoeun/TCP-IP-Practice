@@ -62,18 +62,20 @@ void insert(Trie* trie, char* str, int search_cnt)
     cur->isTerminal = 1;
 }
 
-char** result;
+Result** result;
 int result_cnt;
+char* str0;
 
 /* str을 포함하는 모든 문자열 list 반환 */
-char** getStringsContainChar(Trie* trie, char* str)
+Result** getStringsContainChar(Trie* trie, char* str)
 {
     char word[BUF_SIZE] = {0};
     result_cnt = 0;
+    str0 = str;
 
-    result = (char **)malloc((int)sizeof(char *) * WORD_CNT);
+    result = (Result **)malloc((int)sizeof(Result*) * WORD_CNT);
     for (int i = 0; i < WORD_CNT; i++) {
-        result[i] = (char *)malloc(BUF_SIZE);
+        result[i] = (Result *)malloc(sizeof(Result));
     }
 
     traverseAndFindChar(trie->root, str, word, 0);
@@ -90,7 +92,8 @@ void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
         isContain = 1;
 
     if (isContain && cur->isTerminal) {
-        memcpy(result[result_cnt], cur_word, BUF_SIZE);
+        memcpy(result[result_cnt]->word, cur_word, BUF_SIZE);
+        result[result_cnt]->cnt = cur->search_cnt;
         result_cnt++;
     }
 
@@ -102,10 +105,17 @@ void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
     for (int i = 0; i < ALPHABET_SIZE; i++) {
         if (cur->child[i] != 0) {
             strncat(cur_word, &(cur->child[i]->val), 1);
-            if (i == index && !isContain) {
-                traverseAndFindChar(cur->child[i], str + 1, cur_word, isContain);
+            if (!isContain) {
+                // str이 연속되지 않은 경우 다시 처음부터 검색
+                if (i == index) {
+                    traverseAndFindChar(cur->child[i], str + 1, cur_word, isContain);
+                } else if (i != index && *str != *str0) {
+                    traverseAndFindChar(cur->child[i], str0, cur_word, isContain);
+                } else {
+                    traverseAndFindChar(cur->child[i], str, cur_word, isContain);
+                }
             } else {
-                traverseAndFindChar(cur->child[i], str, cur_word, isContain);
+                 traverseAndFindChar(cur->child[i], str, cur_word, isContain);
             }
         }
     }

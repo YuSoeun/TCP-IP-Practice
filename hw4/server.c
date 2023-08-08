@@ -102,7 +102,7 @@ void * handle_clnt(void * arg)
 	int clnt_sock = *((int*)arg);
 	int str_len=0, i;
 	char msg[BUF_SIZE] = {};
-	char ** result;
+	Result ** result;
 	
 	while ((str_len = read(clnt_sock, msg, sizeof(msg))) != 0) {
 		msg[str_len] = 0;
@@ -115,10 +115,11 @@ void * handle_clnt(void * arg)
 		printf("msg: '%s'\n", msg);
 		
 		result = getStringsContainChar(trie, msg);
-		qsort(result, trie->rslt_cnt, BUF_SIZE);
+		// qsort(result, trie->rslt_cnt, BUF_SIZE);
 
 		for (int i = 0; i < trie->rslt_cnt; i++) {
-			printf("content: %s\n", result[i]);
+			printf("data: %s, ", result[i]->word);
+			printf("cnt: %d\n", result[i]->cnt);
 		}
 
 		send_msg(msg, str_len, clnt_sock);
@@ -170,8 +171,9 @@ void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie)
 		while (feof(fp) == 0) {
 			count = 0;
 			fgets(line, BUF_SIZE, fp);
+			printf("%s", line);
+
 			split_line = split(line, " ", &count);
-			
 			strcpy(data, split_line[0]);
 			for (int i = 1; i < count-1; i++) {
 				strcat(data, " ");
@@ -182,10 +184,10 @@ void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie)
 			for (int i = 0; i < strlen(data); i++) {
 				data[i] = tolower(data[i]);
 			}
-			printf("%s\n", data);
+			
 			insert(trie, data, atoi(split_line[count-1]));
 		}
-		printf("\n");
+		printf("\n\n");
 	}
 }
 

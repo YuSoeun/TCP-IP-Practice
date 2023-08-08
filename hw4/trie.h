@@ -25,6 +25,12 @@ typedef struct trie
     int rslt_cnt;
 } Trie;
 
+typedef struct result
+{
+    char word[BUF_SIZE];
+    int cnt;
+} Result;
+
 Trie * getNewTrie();
 Node * getNewNode(char c);
 int charToInt(char c);
@@ -32,7 +38,7 @@ char intToChar(int i);
 void insert(Trie* trie, char* str, int search_cnt);
 int search(Trie* trie, char * str);
 int deletion(Node *cur, char* str);
-char** getStringsContainChar(Trie* trie, char* str);
+Result ** getStringsContainChar(Trie* trie, char* str);
 void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain);  // private
 int search(Trie* trie, char * str);
 
