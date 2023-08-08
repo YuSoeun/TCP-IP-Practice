@@ -61,17 +61,10 @@ int main(int argc, char *argv[])
     // Client console 출력
     clrscr();
     while (1) {
-        clrscr();
         EnableCursor(1);
         DrawBorderLine('-', '|', 5);
         gotoxy(2, 4);
         printf("* 연관 검색어 List");
-
-        gotoxy(3, 6);
-        printf("search_word: %s", search_word);
-
-        gotoxy(3, 8);
-        printf("msg: %s", msg);
         
         gotoxy(1, 1);
         printf("\033[38;2;159;75;153mSearch Word: ");
@@ -80,7 +73,6 @@ int main(int argc, char *argv[])
         printf("\033[38;2;255;255;255m%s", search_word);
         EnableCursor(0);
 
-        // TODO: sever에게 검색어 보내기
         MySleep(500);
     }
 
@@ -97,7 +89,7 @@ void * send_msg(void * arg)   // send thread main
 
 	int sock = *((int*)arg);
 	while(1) {
-        gotoxy(14+len, 1);
+        gotoxy(12+len, 1);
 		alpha = getch();
         printf("%c", alpha);
         
@@ -114,6 +106,7 @@ void * send_msg(void * arg)   // send thread main
 		}
 
 		write(sock, search_word, strlen(search_word));
+        clrscr();
 	}
 	return NULL;
 }
@@ -121,14 +114,31 @@ void * send_msg(void * arg)   // send thread main
 void * recv_msg(void * arg)   // read thread main
 {
 	int sock = *((int*)arg);
+    int count, buffer;
+    char line[BUF_SIZE];
+    char temp[BUF_SIZE] = {0};
 	int str_len;
+
 	while (1) {
-		str_len = read(sock, msg, BUF_SIZE-1);
+		str_len = read(sock, &count, sizeof(int));
+        // gotoxy(1, 2);
+        // printf("count: %d\n", count);
 		if (str_len == -1) 
 			return (void*) -1;
-		msg[str_len] = 0;
-	}
+        
+        for (int i = 0; i < count; i++) {
+		    str_len = read(sock, line, BUF_SIZE);
 
+            while (str_len < BUF_SIZE) {
+                buffer = read(sock, temp, BUF_SIZE - str_len);
+                str_len += buffer;
+            }
+
+            gotoxy(3, 6+i);
+            printf("%s", line);
+        }
+	}
+		msg[str_len] = 0;
 
 	return NULL;
 }

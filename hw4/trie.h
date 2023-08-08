@@ -8,6 +8,7 @@
 
 #define ALPHABET_SIZE 27    // TODO: space는 예외로 27
 #define BUF_SIZE 1024
+#define WORD_SIZE 512
 #define WORD_CNT 100
 
 typedef struct node
@@ -27,7 +28,7 @@ typedef struct trie
 
 typedef struct result
 {
-    char word[BUF_SIZE];
+    char word[WORD_CNT];
     int cnt;
 } Result;
 

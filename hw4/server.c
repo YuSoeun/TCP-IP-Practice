@@ -26,9 +26,9 @@
 #include "file.h"
 #include "trie.h"
 
-#define BUF_SIZE 1024
 #define MAX_CLNT 256
 #define NAME_LEN 256
+#define BUF_SIZE 1024
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
@@ -36,10 +36,11 @@ pthread_mutex_t mutx;
 Trie *trie;
 
 void * handle_clnt(void * arg);
-void send_msg(char * msg, int len, int clnt_sock);
+void send_msg(Result ** result, int count, int clnt_sock);
 void error_handling(char * msg);
 char** split(char* str, const char* delimiter, int* count);
 void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie);
+void bubbleSort(Result** arr, int count);
 
 int main(int argc, char *argv[])
 {
@@ -68,16 +69,8 @@ int main(int argc, char *argv[])
 	if(listen(serv_sock, 5)==-1)
 		error_handling("listen() error");
 
-	// TODO: 파일 가져와 읽고 Trie structure로 저장
 	trie = getNewTrie();
 	openFileAndSaveTrie(argv[2], trie);
-
-	// result = getStringsContainChar(trie, "pohang");
-	// printf("cnt: %d\n", trie->rslt_cnt);
-
-	// for (int i = 0; i < trie->rslt_cnt; i++) {
-	// 	printf("content: %s\n", result[i]);
-	// }
 
 	while(1)
 	{
@@ -122,7 +115,10 @@ void * handle_clnt(void * arg)
 			printf("cnt: %d\n", result[i]->cnt);
 		}
 
-		send_msg(msg, str_len, clnt_sock);
+		bubbleSort(result, trie->rslt_cnt);
+
+		// TODO: 상위 10개 보내기
+		send_msg(result, trie->rslt_cnt, clnt_sock);
     }
 	
 	// remove disconnected client
@@ -140,11 +136,33 @@ void * handle_clnt(void * arg)
 	return NULL;
 }
 
-void send_msg(char * msg, int len, int clnt_sock)   // send to all
+void send_msg(Result ** result, int count, int clnt_sock)   // send to all
 {
 	int send_len;
-	send_len = write(clnt_sock, msg, len);
-	printf("send_len: %d\n", send_len);
+	char line[BUF_SIZE];
+
+	send_len = write(clnt_sock, &count, sizeof(int));
+	printf("count: %d\n", count);
+	for (int i = 0; i < count; i++) {
+		sprintf(line, "%d. %-30s	(%d)", i+1, result[i]->word, result[i]->cnt);
+		printf("line: %s\n", line);
+		send_len = write(clnt_sock, line, BUF_SIZE);
+		// printf("send_len: %d\n", send_len);
+	}
+}
+
+void bubbleSort(Result** arr, int count)
+{
+    Result* temp;
+    for (int i = 0; i < count; i++) {
+        for (int j = 0; j < count - i - 1; j++) {
+            if (arr[j]->cnt < arr[j+1]->cnt) {    // swap
+                temp = arr[j];
+                arr[j] = arr[j+1];
+                arr[j+1] = temp;
+            }
+        }
+    }
 }
 
 void error_handling(char * msg)
