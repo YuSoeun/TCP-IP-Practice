@@ -20,6 +20,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <ctype.h>
 
 #include "Console.h"
 #include "file.h"
@@ -32,6 +33,7 @@
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
 pthread_mutex_t mutx;
+Trie *trie;
 
 void * handle_clnt(void * arg);
 void send_msg(char * msg, int len, int clnt_sock);
@@ -53,64 +55,44 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
   
-	// pthread_mutex_init(&mutx, NULL);
-	// serv_sock=socket(PF_INET, SOCK_STREAM, 0);
+	pthread_mutex_init(&mutx, NULL);
+	serv_sock=socket(PF_INET, SOCK_STREAM, 0);
 
-	// memset(&serv_adr, 0, sizeof(serv_adr));
-	// serv_adr.sin_family=AF_INET; 
-	// serv_adr.sin_addr.s_addr=htonl(INADDR_ANY);
-	// serv_adr.sin_port=htons(atoi(argv[1]));
+	memset(&serv_adr, 0, sizeof(serv_adr));
+	serv_adr.sin_family=AF_INET; 
+	serv_adr.sin_addr.s_addr=htonl(INADDR_ANY);
+	serv_adr.sin_port=htons(atoi(argv[1]));
 	
-	// if(bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr))==-1)
-	// 	error_handling("bind() error");
-	// if(listen(serv_sock, 5)==-1)
-	// 	error_handling("listen() error");
+	if(bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr))==-1)
+		error_handling("bind() error");
+	if(listen(serv_sock, 5)==-1)
+		error_handling("listen() error");
 
 	// TODO: 파일 가져와 읽고 Trie structure로 저장
-	Trie *trie = getNewTrie();
+	trie = getNewTrie();
 	openFileAndSaveTrie(argv[2], trie);
 
-	insert(trie, "hello", 100);
-    printf("%d ", search(trie, "hello"));       // 1을 출력
- 
-    insert(trie, "helloworld", 100);
-    printf("%d ", search(trie, "helloworld"));  // 1을 출력
-    printf("%d ", search(trie, "world"));  // 0을 출력
-    printf("\n");  // 0을 출력
-
-	//TODO: lower
-	result = getStringsContainChar(trie, "pohang");
-	printf("cnt: %d\n", trie->rslt_cnt);
-
-	for (int i = 0; i < trie->rslt_cnt; i++) {
-		printf("content: %s\n", result[i]);
-	}
-
-	// result = getStringsContainChar(trie, "world");
+	// result = getStringsContainChar(trie, "pohang");
 	// printf("cnt: %d\n", trie->rslt_cnt);
 
 	// for (int i = 0; i < trie->rslt_cnt; i++) {
 	// 	printf("content: %s\n", result[i]);
 	// }
- 
-	// while(1)
-	// {
-	// 	clnt_adr_sz = sizeof(clnt_adr);
-	// 	clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr,&clnt_adr_sz);
+
+	while(1)
+	{
+		clnt_adr_sz = sizeof(clnt_adr);
+		clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr,&clnt_adr_sz);
 		
-	// 	pthread_mutex_lock(&mutx);
-	// 	clnt_socks[clnt_cnt++] = clnt_sock;
-	// 	pthread_mutex_unlock(&mutx);
+		pthread_mutex_lock(&mutx);
+		clnt_socks[clnt_cnt++] = clnt_sock;
+		pthread_mutex_unlock(&mutx);
 	
-	// 	pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);
-	// 	pthread_detach(t_id);
-	// 	printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));
-	// }
-	// close(serv_sock);
-
-    
-
-    // 검색어 중간/끝에 나오는 경우 고려
+		pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);
+		pthread_detach(t_id);
+		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));
+	}
+	close(serv_sock);
 
     return 0;
 }
@@ -120,11 +102,26 @@ void * handle_clnt(void * arg)
 	int clnt_sock = *((int*)arg);
 	int str_len=0, i;
 	char msg[BUF_SIZE] = {};
+	char ** result;
 	
 	while ((str_len = read(clnt_sock, msg, sizeof(msg))) != 0) {
 		msg[str_len] = 0;
-        send_msg(msg, str_len, clnt_sock);
-        printf("msg: %s\n", msg);
+        
+		// to lower msg
+		for (int i = 0; i < str_len; i++) {
+			msg[i] = tolower(msg[i]);
+		}
+
+		printf("msg: '%s'\n", msg);
+		
+		result = getStringsContainChar(trie, msg);
+		qsort(result, trie->rslt_cnt, BUF_SIZE);
+
+		for (int i = 0; i < trie->rslt_cnt; i++) {
+			printf("content: %s\n", result[i]);
+		}
+
+		send_msg(msg, str_len, clnt_sock);
     }
 	
 	// remove disconnected client
@@ -168,6 +165,7 @@ void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie)
 		printf("Failed to open file.\n");
 	} else {
 		printf("file content is\n");
+		printf("---------------\n");
 		
 		while (feof(fp) == 0) {
 			count = 0;
@@ -180,9 +178,14 @@ void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie)
 				strcat(data, split_line[i]);
 			}
 			strncat(data, "\0", 1);
-			printf("data: %s\n", data);
+
+			for (int i = 0; i < strlen(data); i++) {
+				data[i] = tolower(data[i]);
+			}
+			printf("%s\n", data);
 			insert(trie, data, atoi(split_line[count-1]));
 		}
+		printf("\n");
 	}
 }
 

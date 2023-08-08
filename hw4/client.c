@@ -39,24 +39,24 @@ int main(int argc, char *argv[])
     char alpha;
     int len = 0;
     
-	if(argc!=4) {
+	if(argc != 3) {
 		printf("Usage : %s <IP> <port>\n", argv[0]);
 		exit(1);
 	 }
 	
-	// sock=socket(PF_INET, SOCK_STREAM, 0);
+	sock=socket(PF_INET, SOCK_STREAM, 0);
 	
-	// memset(&serv_addr, 0, sizeof(serv_addr));
-	// serv_addr.sin_family=AF_INET;
-	// serv_addr.sin_addr.s_addr=inet_addr(argv[1]);
-	// serv_addr.sin_port=htons(atoi(argv[2]));
+	memset(&serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family=AF_INET;
+	serv_addr.sin_addr.s_addr=inet_addr(argv[1]);
+	serv_addr.sin_port=htons(atoi(argv[2]));
 	  
-	// if(connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr))==-1)
-	// 	error_handling("connect() error");
+	if(connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr))==-1)
+		error_handling("connect() error");
 
-    // // thread 열기
-    // pthread_create(&snd_thread, NULL, send_msg, (void*)&sock);
-    // pthread_create(&rcv_thread, NULL, recv_msg, (void*)&sock);
+    // thread 열기
+    pthread_create(&snd_thread, NULL, send_msg, (void*)&sock);
+    pthread_create(&rcv_thread, NULL, recv_msg, (void*)&sock);
     
     // Client console 출력
     clrscr();
@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
         MySleep(500);
     }
 
-    // pthread_join(snd_thread, &thread_return);
-    // pthread_join(rcv_thread, &thread_return);
-    // close(sock);
+    pthread_join(snd_thread, &thread_return);
+    pthread_join(rcv_thread, &thread_return);
+    close(sock);
 
     return 0;
 }

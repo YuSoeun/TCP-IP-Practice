@@ -94,22 +94,23 @@ void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
         result_cnt++;
     }
 
-    if (cur->childNum == 0)
+    if (cur->childNum == 0) {
+        cur_word[strlen(cur_word)-1] = 0;
         return;
+    }
     
     for (int i = 0; i < ALPHABET_SIZE; i++) {
         if (cur->child[i] != 0) {
+            strncat(cur_word, &(cur->child[i]->val), 1);
             if (i == index && !isContain) {
-                strncat(cur_word, &(cur->child[i]->val), 1);
                 traverseAndFindChar(cur->child[i], str + 1, cur_word, isContain);
             } else {
-                if (isContain)
-                    strncat(cur_word, &(cur->child[i]->val), 1);
                 traverseAndFindChar(cur->child[i], str, cur_word, isContain);
             }
         }
     }
 
+    cur_word[strlen(cur_word)-1] = 0;
     return;
 }
 
