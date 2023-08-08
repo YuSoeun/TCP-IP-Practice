@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 	pthread_t t_id;
 
 	char filename[NAME_LEN];
+	char ** result;
 	FILE * fp;
 
 	if(argc != 3) {
@@ -67,29 +68,28 @@ int main(int argc, char *argv[])
 	// TODO: 파일 가져와 읽고 Trie structure로 저장
 
 	Trie *trie = getNewTrie();
-	insert(trie, "hello");
+	insert(trie, "hello", 100);
     printf("%d ", search(trie, "hello"));       // 1을 출력
  
-    insert(trie, "helloworld");
+    insert(trie, "helloworld", 100);
     printf("%d ", search(trie, "helloworld"));  // 1을 출력
- 
-    printf("%d ", search(trie, "helll"));       // 0을 출력합니다(존재하지 않음)
- 
-    insert(trie, "hell");
-    printf("%d ", search(trie, "hell"));        // 1을 출력
- 
-    insert(trie, "h");
-    printf("%d \n", search(trie, "h"));         // 1 + 개행을 출력
+    printf("%d ", search(trie, "world"));  // 0을 출력
+    printf("\n");  // 0을 출력
 
-	deletion(trie->root, "hello");
-    printf("%d ", search(trie, "hello"));       // 0 출력(hello 삭제됨)
-    printf("%d ", search(trie, "helloworld"));  // 1을 출력
-    printf("%d \n", search(trie, "hell"));      // 1 + 개행을 출력
+	result = getStringsContainChar(trie, "hello");
+	printf("cnt: %d\n", trie->rslt_cnt);
+
+	for (int i = 0; i < trie->rslt_cnt; i++) {
+		printf("content: %s\n", result[i]);
+	}
+
+	result = getStringsContainChar(trie, "world");
+	printf("cnt: %d\n", trie->rslt_cnt);
+
+	for (int i = 0; i < trie->rslt_cnt; i++) {
+		printf("content: %s\n", result[i]);
+	}
  
-    deletion(trie->root, "h");
-    printf("%d ", search(trie, "h"));           // 0 인쇄(h 삭제됨)
-    printf("%d ", search(trie, "hell"));        // 1을 출력
-    printf("%d\n", search(trie, "helloworld")); // 1 + 개행을 출력
 	// while(1)
 	// {
 	// 	clnt_adr_sz = sizeof(clnt_adr);
