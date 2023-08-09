@@ -100,6 +100,7 @@ void EnableCursor(int enable)
 	}
 }
 
+/* sleep with msec */
 void MySleep(int msec)
 {
     usleep(msec * 1000);
@@ -133,19 +134,19 @@ void DrawLine(int x1, int y1, int x2, int y2, char c)
 	if(dx >= dy){
 		if(dx == 0){
 			gotoxy(x1, y1);
-			printf("%c", c);
+			printf("\033[38;2;255;255;255m%c", c);
 		} else {
 			for(x = x1; x <= x2; x++){
 				y = (y1 * (x2 - x) + y2 * (x - x1) + dx / 2) / dx;
 				gotoxy(x, y);
-				printf("%c", c);
+				printf("\033[38;2;255;255;255m%c", c);
 			}
 		}
 	} else {
 		for(y = y1; y <= y2; y++){
 			x = (x1 * (y2 - y) + x2 * (y - y1) + dy / 2) / dy;
 			gotoxy(x, y);
-			printf("%c", c);
+			printf("\033[38;2;255;255;255m%c", c);
 		}
 	}
 }

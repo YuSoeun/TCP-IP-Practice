@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         EnableCursor(1);
         DrawBorderLine('-', '|', 5);
         gotoxy(2, 4);
-        printf("* 연관 검색어 List");
+        printf("\033[38;2;255;255;255m* 연관 검색어 List");
         
         gotoxy(1, 1);
         printf("\033[38;2;159;75;153mSearch Word: ");
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
         printf("\033[38;2;255;255;255m%s", search_word);
         EnableCursor(0);
 
-        MySleep(500);
+        MySleep(100);
     }
 
     pthread_join(snd_thread, &thread_return);
@@ -93,8 +93,10 @@ void * send_msg(void * arg)   // send thread main
 		alpha = getch();
         printf("%c", alpha);
         
-        if (alpha == 127 || alpha == 8) {       // backspace
-            len--;
+        if ((alpha == 127 || alpha == 8)) {       // backspace
+            if (len > 0) {
+                len--;
+            }
         } else { 
             search_word[len++] = alpha;
         }
@@ -124,7 +126,6 @@ void * recv_msg(void * arg)   // read thread main
 	while (1) {
 		str_len = read(sock, &count, sizeof(int));
 		str_len = read(sock, msg, BUF_SIZE);
-        // gotoxy(1, 2);
 
 		if (str_len == -1) 
 			return (void*) -1;
@@ -139,7 +140,6 @@ void * recv_msg(void * arg)   // read thread main
 
             index = strstr(line, msg);
             gotoxy(3, 6+i);
-            // index = (int)(ptr - &line[0])/sizeof(char *);
             for (int i = 0; i < strlen(line); i++) {
                 if (&line[i] >= index && &line[i] < index + strlen(msg)) {
                     printf("\033[38;2;130;150;200m%c", line[i]);
@@ -148,8 +148,6 @@ void * recv_msg(void * arg)   // read thread main
                 }
             }
             printf("\n");
-            
-            // printf("%s", line);
         }
 	}
 		msg[str_len] = 0;
@@ -159,7 +157,7 @@ void * recv_msg(void * arg)   // read thread main
 	
 void error_handling(char *msg)
 {
-    // gotoxy(7, 6);
-	// printf("%s\n", msg);
+    gotoxy(3, 2);
+	printf("%s\n", msg);
 	exit(1);
 }

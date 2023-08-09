@@ -3,6 +3,7 @@
 #include <string.h>
 #include "trie.h"
 
+/* trie constructor */
 Trie* getNewTrie()
 {
     Trie* trie = (Trie *)malloc(sizeof(Trie));
@@ -12,6 +13,7 @@ Trie* getNewTrie()
     return trie;
 }
 
+/* node constructor which value is c */
 Node* getNewNode(char c)
 {
     Node* node = (Node *)malloc(sizeof(Node));
@@ -27,6 +29,7 @@ Node* getNewNode(char c)
     return node;
 }
 
+/* char to int "space" returns 26 as an exception */
 int charToInt(char c)
 {
     if (c == ' ') {
@@ -43,14 +46,15 @@ char intToChar(int i)
     return i + 'a';
 }
 
+/* insert str into trie */
 void insert(Trie* trie, char* str, int search_cnt)
 {
     Node* cur = trie->root;
 
     while (*str != 0){
-        int index = charToInt(*str); // 문자열 일부 숫자로 변환
-        // child 새로 추가
-        if (cur->child[index] == 0) {
+        int index = charToInt(*str);
+
+        if (cur->child[index] == 0) {               // child 새로 추가
             cur->child[index] = getNewNode(*str);
             cur->childNum++;
         }
@@ -84,6 +88,7 @@ Result** getStringsContainChar(Trie* trie, char* str)
     return result;
 }
 
+/* traverse trie and find char and save in Result */
 void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
 {
     int index = charToInt(*str);
@@ -145,14 +150,13 @@ int search(Trie* trie, char * str)
     return cur->isTerminal;
 }       
 
-// Trie에서 문자열을 삭제하는 재귀 함수 0: 부모 node 삭제, 1: 부모삭제 X
+// delete str in trie (return 0: 부모 node 삭제, 1: 부모삭제 X)
 int deletion(Node* cur, char* str)
 {
     int index = charToInt(*str);
     if (cur->childNum == 0)
         return 0;
 
-    // 문자열의 끝에 도달하지 않은 경우
     if (*str != 0) {
         // 문자열이 1을 반환하면 현재 노드를 삭제
         if (cur != 0 && cur->child[index] != 0 &&
@@ -169,17 +173,12 @@ int deletion(Node* cur, char* str)
         }
     }
 
-    // 문자열의 끝에 도달한 경우
     if (*str == 0 && cur->isTerminal) {
-        // 현재 노드가 리프 노드이고 자식이 없는 경우
-        if (cur->childNum == 0) {
+        if (cur->childNum == 0) {         // 자식이 없는 경우
             free(cur);
             cur = 0;
             return 1;
-        }
- 
-        // 현재 노드가 리프 노드이고 자식이 있는 경우
-        else {
+        } else {                          // 자식이 있는 경우
             cur->isTerminal = 0;
             return 0;
         }

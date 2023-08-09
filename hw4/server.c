@@ -16,17 +16,19 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
+
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <pthread.h>
-#include <ctype.h>
 
 #include "Console.h"
 #include "trie.h"
+#include "file.h"
 
 #define MAX_CLNT 256
-#define NAME_LEN 256
 #define BUF_SIZE 1024
 
 int clnt_cnt = 0;
@@ -37,13 +39,10 @@ Trie *trie;
 void * handle_clnt(void * arg);
 void send_msg(Result ** result, int count, char msg[BUF_SIZE], int clnt_sock);
 void error_handling(char * msg);
-char** split(char* str, const char* delimiter, int* count);
-void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie);
 void bubbleSort(Result** arr, int count);
 
 int main(int argc, char *argv[])
 {
-    // Multi-Thread로 서버 구현 (TCP nodelay socket option 주기)
     int serv_sock, clnt_sock;
 	struct sockaddr_in serv_adr, clnt_adr;
 	int clnt_adr_sz;
@@ -54,7 +53,8 @@ int main(int argc, char *argv[])
 		printf("Usage : %s <port> <file name>\n", argv[0]);
 		exit(1);
 	}
-  
+	
+	// multi thead init and set socket
 	pthread_mutex_init(&mutx, NULL);
 	serv_sock=socket(PF_INET, SOCK_STREAM, 0);
 
@@ -67,7 +67,13 @@ int main(int argc, char *argv[])
 		error_handling("bind() error");
 	if(listen(serv_sock, 5)==-1)
 		error_handling("listen() error");
+	
+	// nodelay 적용 (nagle 알고리즘 해제)
+	int optVal = 1;
+	int optLen = sizeof(optVal);
+	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
+	// open file and save in trie
 	trie = getNewTrie();
 	openFileAndSaveTrie(argv[2], trie);
 
@@ -89,10 +95,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+/* handle client to receive and send msg */
 void * handle_clnt(void * arg)
 {
 	int clnt_sock = *((int*)arg);
-	int str_len=0, i;
+	int str_len = 0, i;
 	char msg[BUF_SIZE] = {};
 	Result ** result;
 	
@@ -103,19 +110,16 @@ void * handle_clnt(void * arg)
 		for (int i = 0; i < str_len; i++) {
 			msg[i] = tolower(msg[i]);
 		}
-
-		printf("msg: '%s'\n", msg);
+		printf("\nreceived msg: '%s'\n", msg);
 		
 		result = getStringsContainChar(trie, msg);
-
+		printf("------ 검색된 전체 data ------\n");
 		for (int i = 0; i < trie->rslt_cnt; i++) {
 			printf("data: %s, ", result[i]->word);
 			printf("cnt: %d\n", result[i]->cnt);
 		}
 
 		bubbleSort(result, trie->rslt_cnt);
-
-		// TODO: 상위 10개 보내기
 		send_msg(result, trie->rslt_cnt, msg, clnt_sock);
     }
 	
@@ -134,25 +138,29 @@ void * handle_clnt(void * arg)
 	return NULL;
 }
 
-void send_msg(Result ** result, int count, char msg[BUF_SIZE], int clnt_sock)   // send to all
+/* send msg to clnt_socket */
+void send_msg(Result ** result, int count, char msg[BUF_SIZE], int clnt_sock)
 {
 	int send_len;
 	char line[BUF_SIZE];
 
+	// 상위 10개만 보내기
+	if (count > 10)
+		count = 10;
+
+	// send line count and origin msg 
 	send_len = write(clnt_sock, &count, sizeof(int));
 	send_len = write(clnt_sock, msg, BUF_SIZE);
-	printf("count: %d\n", count);
-	if (count > 10) {
-		count = 10;
-	}
+	printf("\n---- client에게 %d개의 data를 보냅니다. ----\n", count);
+
 	for (int i = 0; i < count; i++) {
 		sprintf(line, "%d. %-30s	(%d)", i+1, result[i]->word, result[i]->cnt);
-		printf("line: %s\n", line);
+		printf("%s\n", line);
 		send_len = write(clnt_sock, line, BUF_SIZE);
-		// printf("send_len: %d\n", send_len);
 	}
 }
 
+/* bubble sort for Result */
 void bubbleSort(Result** arr, int count)
 {
     Result* temp;
@@ -172,61 +180,4 @@ void error_handling(char * msg)
 	fputs(msg, stderr);
 	fputc('\n', stderr);
 	exit(1);
-}
-
-void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie)
-{
-	char **split_line;
-	FILE * fp;
-	char line[BUF_SIZE];
-	char data[BUF_SIZE];
-	int count;
-
-	if ((fp = fopen(filename, "rb")) == NULL) {
-		printf("Failed to open file.\n");
-	} else {
-		printf("file content is\n");
-		printf("---------------\n");
-		
-		while (feof(fp) == 0) {
-			count = 0;
-			fgets(line, BUF_SIZE, fp);
-			printf("%s", line);
-
-			split_line = split(line, " ", &count);
-			strcpy(data, split_line[0]);
-			for (int i = 1; i < count-1; i++) {
-				strcat(data, " ");
-				strcat(data, split_line[i]);
-			}
-			strncat(data, "\0", 1);
-
-			for (int i = 0; i < strlen(data); i++) {
-				data[i] = tolower(data[i]);
-			}
-			
-			insert(trie, data, atoi(split_line[count-1]));
-		}
-		printf("\n\n");
-	}
-}
-
-char** split(char* str, const char* delimiter, int* count) {
-    int i, j, len;
-    char* token;
-    char** result = NULL;
-
-    // 구분자로 문자열을 분리한 후, 문자열 개수(count)를 구합니다.
-    token = strtok(str, delimiter);
-    while (token != NULL) {
-        (*count)++;
-        result = (char**)realloc(result, (*count) * sizeof(char*));
-        result[(*count) - 1] = token;
-        token = strtok(NULL, delimiter);
-    }
-
-    // 문자열 개수(count)만큼의 문자열 배열을 동적으로 할당합니다.
-    result = (char**)realloc(result, (*count) * sizeof(char*));
-
-    return result;
 }
