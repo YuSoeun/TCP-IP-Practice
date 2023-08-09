@@ -116,13 +116,16 @@ void * recv_msg(void * arg)   // read thread main
 	int sock = *((int*)arg);
     int count, buffer;
     char line[BUF_SIZE];
+    char msg[BUF_SIZE];
     char temp[BUF_SIZE] = {0};
 	int str_len;
+    char *index;
 
 	while (1) {
 		str_len = read(sock, &count, sizeof(int));
+		str_len = read(sock, msg, BUF_SIZE);
         // gotoxy(1, 2);
-        // printf("count: %d\n", count);
+
 		if (str_len == -1) 
 			return (void*) -1;
         
@@ -134,8 +137,19 @@ void * recv_msg(void * arg)   // read thread main
                 str_len += buffer;
             }
 
+            index = strstr(line, msg);
             gotoxy(3, 6+i);
-            printf("%s", line);
+            // index = (int)(ptr - &line[0])/sizeof(char *);
+            for (int i = 0; i < strlen(line); i++) {
+                if (&line[i] >= index && &line[i] < index + strlen(msg)) {
+                    printf("\033[38;2;130;150;200m%c", line[i]);
+                } else {
+                    printf("\033[38;2;255;255;255m%c", line[i]);
+                }
+            }
+            printf("\n");
+            
+            // printf("%s", line);
         }
 	}
 		msg[str_len] = 0;

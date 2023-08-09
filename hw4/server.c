@@ -35,7 +35,7 @@ pthread_mutex_t mutx;
 Trie *trie;
 
 void * handle_clnt(void * arg);
-void send_msg(Result ** result, int count, int clnt_sock);
+void send_msg(Result ** result, int count, char msg[BUF_SIZE], int clnt_sock);
 void error_handling(char * msg);
 char** split(char* str, const char* delimiter, int* count);
 void openFileAndSaveTrie(char filename[NAME_LEN], Trie* trie);
@@ -107,7 +107,6 @@ void * handle_clnt(void * arg)
 		printf("msg: '%s'\n", msg);
 		
 		result = getStringsContainChar(trie, msg);
-		// qsort(result, trie->rslt_cnt, BUF_SIZE);
 
 		for (int i = 0; i < trie->rslt_cnt; i++) {
 			printf("data: %s, ", result[i]->word);
@@ -117,7 +116,7 @@ void * handle_clnt(void * arg)
 		bubbleSort(result, trie->rslt_cnt);
 
 		// TODO: 상위 10개 보내기
-		send_msg(result, trie->rslt_cnt, clnt_sock);
+		send_msg(result, trie->rslt_cnt, msg, clnt_sock);
     }
 	
 	// remove disconnected client
@@ -135,12 +134,13 @@ void * handle_clnt(void * arg)
 	return NULL;
 }
 
-void send_msg(Result ** result, int count, int clnt_sock)   // send to all
+void send_msg(Result ** result, int count, char msg[BUF_SIZE], int clnt_sock)   // send to all
 {
 	int send_len;
 	char line[BUF_SIZE];
 
 	send_len = write(clnt_sock, &count, sizeof(int));
+	send_len = write(clnt_sock, msg, BUF_SIZE);
 	printf("count: %d\n", count);
 	if (count > 10) {
 		count = 10;
