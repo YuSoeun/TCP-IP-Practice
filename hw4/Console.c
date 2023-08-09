@@ -3,80 +3,8 @@
 		This file is for Windows
 */
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
-
-
-#ifdef _WINDOWS
-// for windows
-
-#include <windows.h>
-
-#include "Console.h"
-
-void clrscr(void)		// clear the screen
-{
-	COORD Cur= {0, 0};
-	unsigned long dwLen = 0;
-
-	int width = getWindowWidth();
-	int height = getWindowHeight();
-	int size = width * height;
-
-	gotoxy(1, 1);
-	FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', size, Cur, &dwLen);
-	gotoxy(1, 1);
-}
-
-void gotoxy(int x, int y)	// move cursor to (x, y)
-{
-	COORD Pos = { (short)(x - 1), (short)(y - 1)};
-
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Pos);
-}
-
-int getWindowWidth()
-{
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &csbi);
-
-    return (int)(csbi.srWindow.Right - csbi.srWindow.Left + 1);
-}
-
-int getWindowHeight()
-{
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &csbi);
-
-    return (int)(csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
-}
-
-void EnableCursor(int enable)
-{
-    CONSOLE_CURSOR_INFO cursorInfo = { 0, };
-    cursorInfo.dwSize = 1;
-    cursorInfo.bVisible = enable;
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo);
-}
-
-void MySleep(int msec)
-{
-	Sleep(msec);
-}
-
-void MyPause()
-{
-	system("PAUSE");
-}
-
-#endif	// _WINDOWS
-
-
-#if defined(_LINUX) || defined(_MAC)
-// for Mac or Linux
-
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
@@ -84,17 +12,20 @@ void MyPause()
 
 #include "Console.h"
 
+/* go to (int x, y) console */
 void gotoxy(int x,int y)
 {
     printf("%c[%d;%df",0x1B,y,x);
 }
 
+/* refresh console screen */
 void clrscr()
 {
 	fprintf(stdout, "\033[2J\033[0;0f");
 	fflush(stdout);
 }
 
+/* get window width */
 int getWindowWidth()
 {
 	struct winsize w;
@@ -103,6 +34,7 @@ int getWindowWidth()
 	return w.ws_col;
 }
 
+/* get window height */
 int getWindowHeight()
 {
 	struct winsize w;
@@ -111,6 +43,7 @@ int getWindowHeight()
 	return w.ws_row;
 }
 
+/* get char without waiting enter */
 int getch()
 {
 	int c = 0;
@@ -125,10 +58,10 @@ int getch()
 	c = getchar();
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
 
-
 	return c;
 }
 
+/* key 입력 여부 있으면 1, 없으면 0 */
 int kbhit(void)
 {
   struct termios oldt, newt;
@@ -155,6 +88,7 @@ int kbhit(void)
   return 0;
 }
 
+/* enable cursor in console */
 void EnableCursor(int enable)
 {
 	if(enable){
@@ -166,6 +100,7 @@ void EnableCursor(int enable)
 	}
 }
 
+/* sleep with msec */
 void MySleep(int msec)
 {
     usleep(msec * 1000);
@@ -177,9 +112,7 @@ void MyPause()
 	getchar();
 }
 
-#endif 	// defined(_LINUX) || defined(_MAC)
-
-
+/* drow line with char */
 void DrawLine(int x1, int y1, int x2, int y2, char c)
 {
 	int dx = 0, dy = 0;
@@ -201,21 +134,36 @@ void DrawLine(int x1, int y1, int x2, int y2, char c)
 	if(dx >= dy){
 		if(dx == 0){
 			gotoxy(x1, y1);
-			printf("%c", c);
+			printf("\033[38;2;255;255;255m%c", c);
 		} else {
 			for(x = x1; x <= x2; x++){
 				y = (y1 * (x2 - x) + y2 * (x - x1) + dx / 2) / dx;
 				gotoxy(x, y);
-				printf("%c", c);
+				printf("\033[38;2;255;255;255m%c", c);
 			}
 		}
 	} else {
 		for(y = y1; y <= y2; y++){
 			x = (x1 * (y2 - y) + x2 * (y - y1) + dy / 2) / dy;
 			gotoxy(x, y);
-			printf("%c", c);
+			printf("\033[38;2;255;255;255m%c", c);
 		}
 	}
+}
+
+/* drow border line with char */
+void DrawBorderLine(char c1, char c2, char y1)
+{
+	int max_width = getWindowWidth() - 1;
+	int max_height = getWindowHeight() - 1;
+
+	// 가로
+	DrawLine(0, y1, max_width, y1, c1);
+	DrawLine(0, max_height, max_width, max_height, c1);
+
+	// 세로
+	DrawLine(0, y1+1, 0, max_height-1, c2);
+	DrawLine(max_width, y1+1, max_width, max_height-1, c2);
 }
 
 void swap(int *pa, int *pb)
@@ -224,4 +172,3 @@ void swap(int *pa, int *pb)
 	*pa = *pb;
 	*pb = temp;
 }
-
