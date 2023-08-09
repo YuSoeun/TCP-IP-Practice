@@ -109,7 +109,7 @@ void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
                 // str이 연속되지 않은 경우 다시 처음부터 검색
                 if (i == index) {
                     traverseAndFindChar(cur->child[i], str + 1, cur_word, isContain);
-                } else if (i != index && *str != *str0) {
+                } else if (i != index && str != str0) {
                     traverseAndFindChar(cur->child[i], str0, cur_word, isContain);
                 } else {
                     traverseAndFindChar(cur->child[i], str, cur_word, isContain);
