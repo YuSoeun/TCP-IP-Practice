@@ -1,6 +1,6 @@
 /*
     자동 완성 기능 기반 Search Engine 구현
-    1. 서버의 Listen 포트 번호와 검색어 데이터베이스 파일을 command line argument 로 넣어 프로그램을 실행
+    1. 서버의 Listen 포트 번호와 검색어 데이터베이스 파일을 command line argument로 넣어 프로그램을 실행
        - 서버는 Multi-Thread로 구현
      $ ./search_server 9090 data.txt
     2. 파일로부터 검색어와 검색어의 검색 횟수를 읽어 온다. Pohang 30000
