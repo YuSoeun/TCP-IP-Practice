@@ -31,6 +31,7 @@
 
 void * send_msg(void * arg);
 void * recv_msg(void * arg);
+void recv_ports(void * arg);
 // 
 
 int len = 0;
@@ -114,6 +115,22 @@ void * send_msg(void * arg)   // send thread main
         clrscr();
 	}
 	return NULL;
+}
+
+/* send clnt_sockets information to receiver */
+void * recv_ports(void * arg)
+{
+	int send_len;
+	char line[BUF_SIZE];
+
+	// pthread_mutex_lock(&mutx);
+	// for(int i = 0; i < clnt_cnt; i++) {
+	// 	// receiver 수만큼 보내기
+	// 	for(int j = 0; j < clnt_cnt; j++) {
+	// 		write(clnt_socks[i], clnt_Info[j], sizeof(SocketInfo*));
+	// 	}
+	// }
+	// pthread_mutex_unlock(&mutx);
 }
 	
 void * recv_msg(void * arg)   // read thread main
