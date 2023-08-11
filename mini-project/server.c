@@ -32,15 +32,15 @@
 #include "socket.h"
 
 #define MAX_CLNT 256
-#define BUF_SIZE 1024
+// #define BUF_SIZE 1024
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
-int all_connect_flag = 0;
 SocketInfo** clnt_info;
-pthread_mutex_t mutx;
+pthread_mutex_t serv_mutx;
 
 void sendRecvSocksInfo();
+void * readClntMsg(void * arg);
 void * handle_clnt(void * arg);
 void send_msg(int count, char msg[BUF_SIZE], int clnt_sock);
 // void bubbleSort(Result** arr, int count);
@@ -61,13 +61,13 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	}
 	
 	// multi thead init and set socket
-	pthread_mutex_init(&mutx, NULL);
-	serv_sock=socket(PF_INET, SOCK_STREAM, 0);
+	pthread_mutex_init(&serv_mutx, NULL);
+	serv_sock = socket(PF_INET, SOCK_STREAM, 0);
 
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family=AF_INET; 
-	serv_adr.sin_addr.s_addr=htonl(INADDR_ANY);
-	serv_adr.sin_port=htons(listen_port);
+	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_adr.sin_port = htons(listen_port);
 	
 	if(bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr))==-1)
 		error_handling("bind() error");
@@ -84,9 +84,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		clnt_adr_sz = sizeof(clnt_adr);
 		clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr,&clnt_adr_sz);
 		
-		pthread_mutex_lock(&mutx);
+		pthread_mutex_lock(&serv_mutx);
 		clnt_socks[clnt_cnt++] = clnt_sock;
-		pthread_mutex_unlock(&mutx);
+		pthread_mutex_unlock(&serv_mutx);
 	
 		clnt_info[i]->id = clnt_sock;
 		memcpy(clnt_info[i]->ip, inet_ntoa(clnt_adr.sin_addr), sizeof(clnt_adr.sin_addr));
@@ -96,7 +96,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 
 	// receiver 갯수 보내기
 	for (int i = 0; i < recv_num; i++) {
-		write(clnt_socks[i], recv_num-1, sizeof(int));
+		write(clnt_socks[i], &recv_num, sizeof(int));
 	}
 
 	clnt_thread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -108,14 +108,12 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		}
 
 		// receiver들끼리 connect complete msg read하는 thread 생성
-		pthread_create(&clnt_thread[i], NULL, readClientMsg, (void*)&clnt_socks[i]);
+		pthread_create(&clnt_thread[i], NULL, readClntMsg, (void*)&clnt_socks[i]);
 	}
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
 		printf("thread[%d] return %p", i, thread_return);
 	}
-
-	all_connect_flag = 1;
 
 	close(serv_sock);
 
@@ -123,26 +121,24 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 }
 
 /* handle client to receive and send msg */
-void * readClientMsg(void * arg)
+void * readClntMsg(void * arg)
 {
 	int clnt_sock = *((int*)arg);
 	int str_len = 0, i;
 	char msg[BUF_SIZE] = {};
 	
 	for (int i = 0; i < clnt_cnt; i++) {
-		if (all_connect_flag == 1) {
-			recvStr(clnt_sock, msg, BUF_SIZE);
-			printf("\nreceived msg: %s\n", msg);
+		recvStr(clnt_sock, msg, BUF_SIZE);
+		printf("\nreceived msg: %s\n", msg);
 
-			return NULL;
-		}
+		return NULL;
 	}
 }
 
 void removeDisconnectedClient(int sock)
 {
 	// remove disconnected client
-	pthread_mutex_lock(&mutx);
+	pthread_mutex_lock(&serv_mutx);
 	for (int i = 0; i < clnt_cnt; i++) {
 		if (sock == clnt_socks[i]) {
 			while (i++ < clnt_cnt - 1)
@@ -151,7 +147,7 @@ void removeDisconnectedClient(int sock)
 		}
 	}
 	clnt_cnt--;
-	pthread_mutex_unlock(&mutx);
+	pthread_mutex_unlock(&serv_mutx);
 	close(sock);
 }
 

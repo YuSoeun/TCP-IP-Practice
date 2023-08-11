@@ -23,7 +23,7 @@ int readSocketInfo(int sock, SocketInfo* socket_info)
     return str_len;
 }
 
-void recvStr(int sock, char* msg, int size)
+void* recvStr(int sock, char* msg, int size)
 {
 	int str_len, buffer;
     char temp[BUF_SIZE] = {0};
