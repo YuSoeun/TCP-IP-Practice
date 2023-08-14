@@ -19,4 +19,4 @@ socket.o: socket.c socket.h
 	gcc -c -o socket.o socket.c
 
 clean:
-	rm *.out *.o
+	rm *.out *.o p2p
