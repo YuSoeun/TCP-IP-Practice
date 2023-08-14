@@ -166,7 +166,8 @@ void* connectReceiver(void* arg)
     recv_addr.sin_port = recv_info->listen_port;
 
     if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1)
-        error_handling("connect() error");
+        perror("connect() error");
+        // error_handling("connect() error");
 
     pthread_mutex_lock(&clnt_mutx);
     recv_socks[recv_cnt++] = recv_sock;
