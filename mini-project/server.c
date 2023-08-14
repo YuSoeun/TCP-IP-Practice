@@ -74,9 +74,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	if (listen(serv_sock, 5)==-1)
 		error_handling("listen() error");
 	
-	int optVal = 1;
-	int optLen = sizeof(optVal);
-	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
+	// int optVal = 1;
+	// int optLen = sizeof(optVal);
+	// setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
 	// TODO: open file and save in segments (seg 수, 파일 이름 따로라도 저장해서 보내주기)
 
@@ -91,12 +91,15 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		clnt_info[i]->id = i;
 		memcpy(clnt_info[i]->ip, inet_ntoa(clnt_adr.sin_addr), BUF_SIZE);
 		read(clnt_sock, &clnt_info[i]->listen_port, sizeof(int));
-		printf("Connected client IP: %s, port: %d\n", clnt_info[i]->ip, clnt_info[i]->listen_port);
+		printf("Connected client IP: %s, port: %d\n", inet_ntoa(clnt_adr.sin_addr), clnt_info[i]->listen_port);
 	}
 	
 	int num = recv_num;
 	clnt_thread = (pthread_t *)malloc(sizeof(pthread_t));
 	for (int i = 0; i < recv_num; i++) {
+		// receiver들끼리 연결 됐는지 확인하는 msg read하는 thread
+		pthread_create(&clnt_thread[i], NULL, readClntMsg, (void*)&clnt_socks[i]);
+
 		// 각 recevier가 connect 요청해야 할 정보 (총 갯수, connect하는 수)
 		write(clnt_socks[i], &recv_num, sizeof(int));
 		num--;
@@ -105,9 +108,6 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 			if (i < j)
 				writeSocketInfo(clnt_socks[i], clnt_info[j]);
 		}
-
-		// receiver들끼리 연결 됐는지 확인하는 msg read하는 thread
-		pthread_create(&clnt_thread[i], NULL, readClntMsg, (void*)&clnt_socks[i]);
 	}
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
