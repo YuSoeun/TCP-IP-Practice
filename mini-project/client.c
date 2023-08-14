@@ -188,7 +188,8 @@ void* connectReceiver(void* arg)
     printf("connect ip: %s, port: %d\n", inet_ntoa(recv_addr.sin_addr), recv_addr.sin_port);
 
     if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1)
-        error_handling("connect() error");
+        perror("connect() error");
+        // error_handling("connect() error");
 
     printf("Connected client IP: %s, port: %d\n", inet_ntoa(recv_addr.sin_addr), (int)recv_addr.sin_port);
 
