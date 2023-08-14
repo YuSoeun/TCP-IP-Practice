@@ -62,7 +62,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	
 	// multi thead init and set socket
 	pthread_mutex_init(&serv_mutx, NULL);
-	serv_sock = socket(PF_INET, SOCK_STREAM, 0);
+	if ((serv_sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket set error");
+    }
 
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family=AF_INET;
@@ -74,9 +76,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	if (listen(serv_sock, 5)==-1)
 		error_handling("listen() error");
 	
-	// int optVal = 1;
-	// int optLen = sizeof(optVal);
-	// setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
+	int optVal = 1;
+	int optLen = sizeof(optVal);
+	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
 	// TODO: open file and save in segments (seg 수, 파일 이름 따로라도 저장해서 보내주기)
 
@@ -91,7 +93,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		clnt_info[i]->id = i;
 		memcpy(clnt_info[i]->ip, inet_ntoa(clnt_adr.sin_addr), BUF_SIZE);
 		read(clnt_sock, &clnt_info[i]->listen_port, sizeof(int));
-		printf("Connected client IP: %s, port: %d\n", inet_ntoa(clnt_adr.sin_addr), clnt_info[i]->listen_port);
+		printf("Connected client IP: %s, port: %d\n", clnt_info[i]->ip, clnt_info[i]->listen_port);
 	}
 	
 	int num = recv_num;
