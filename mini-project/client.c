@@ -72,9 +72,9 @@ int client(int listen_port, char* ip, int port)
 	if (listen(clnt_sock, 5) == -1)
 		error_handling("listen() error");
     
-    int optVal = 1;
-	int optLen = sizeof(optVal);
-	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
+    // int optVal = 1;
+	// int optLen = sizeof(optVal);
+	// setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
     // 다른 Receiver accept하는 thread 열기
     pthread_create(&acpt_thread, NULL, acceptReceiver, (void*)&clnt_sock);

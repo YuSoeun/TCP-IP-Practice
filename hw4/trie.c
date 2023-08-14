@@ -129,7 +129,7 @@ void traverseAndFindChar(Node* cur, char* str, char* cur_word, int isContain)
     return;
 }
 
-/* str을 포함하는 문자 list 반환 */
+/* str을 포함하는 지 여부 반환 */
 int search(Trie* trie, char * str)
 {
     Node* cur = trie->root;
@@ -137,7 +137,7 @@ int search(Trie* trie, char * str)
     if (cur->childNum == 0)
         return 0;
     
-    while (*str != 0){
+    while (*str != 0) {
         int index = charToInt(*str);
 
         if (cur->child[index] == 0) {
