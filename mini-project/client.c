@@ -18,10 +18,14 @@
 #include <stdlib.h>
 #include <unistd.h> 
 #include <string.h>
+
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <pthread.h>
 #include "Console.h"
+
 #include "client_server.h"
 #include "socket.h"
 
@@ -54,13 +58,15 @@ int client(int listen_port, char* ip, int port)
     pthread_mutex_init(&clnt_mutx, NULL);
     clnt_sock = socket(PF_INET, SOCK_STREAM, 0);
 
-    memset(&clnt_sock, 0, sizeof(clnt_sock));
+    memset(&clnt_adr, 0, sizeof(clnt_adr));
 	clnt_adr.sin_family = AF_INET; 
 	clnt_adr.sin_addr.s_addr = htonl(INADDR_ANY);
 	clnt_adr.sin_port = htons(listen_port);
     
-    if (bind(clnt_sock, (struct sockaddr*) &clnt_sock, sizeof(clnt_sock)) == -1)
-		error_handling("bind() error");
+    if (bind(clnt_sock, (struct sockaddr*) &clnt_adr, sizeof(clnt_adr)) == -1) {
+        error_handling("bind() error");
+    }
+
 	if (listen(clnt_sock, 5) == -1)
 		error_handling("listen() error");
     
