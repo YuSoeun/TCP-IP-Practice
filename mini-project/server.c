@@ -41,8 +41,8 @@ pthread_mutex_t serv_mutx;
 
 void sendRecvSocksInfo();
 void * readClntMsg(void * arg);
-void * handle_clnt(void * arg);
-void send_msg(int count, char msg[BUF_SIZE], int clnt_sock);
+void * handleClnt(void * arg);
+// void sendMsg(int count, char msg[BUF_SIZE], int clnt_sock);
 // void bubbleSort(Result** arr, int count);
 
 int server(int listen_port, int recv_num, char* filename, int seg_size)
@@ -82,22 +82,23 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 
 	for (int i = 0; i < recv_num; i++) {
 		clnt_adr_sz = sizeof(clnt_adr);
-		clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr,&clnt_adr_sz);
+		clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr, &clnt_adr_sz);
 		
 		pthread_mutex_lock(&serv_mutx);
 		clnt_socks[clnt_cnt++] = clnt_sock;
 		pthread_mutex_unlock(&serv_mutx);
 	
-		clnt_info[i]->id = clnt_sock;
+		clnt_info[i]->id = i;
 		memcpy(clnt_info[i]->ip, inet_ntoa(clnt_adr.sin_addr), BUF_SIZE);
-		read(clnt_sock, clnt_info[i]->listen_port, sizeof(int));
+		read(clnt_sock, &clnt_info[i]->listen_port, sizeof(int));
 		printf("Connected client IP: %s, port: %d\n", clnt_info[i]->ip, clnt_info[i]->listen_port);
 	}
 	
 	int num = recv_num;
 	clnt_thread = (pthread_t *)malloc(sizeof(pthread_t));
 	for (int i = 0; i < recv_num; i++) {
-		// 각 recevier가 connect 요청해야 할 정보
+		// 각 recevier가 connect 요청해야 할 정보 (총 갯수, connect하는 수)
+		write(clnt_socks[i], &recv_num, sizeof(int));
 		num--;
 		write(clnt_socks[i], &num, sizeof(int));
 		for (int j = 0; j < recv_num ; j++) {
@@ -127,7 +128,7 @@ void * readClntMsg(void * arg)
 	
 	for (int i = 0; i < clnt_cnt; i++) {
 		recvStr(clnt_sock, msg, BUF_SIZE);
-		printf("\nreceived msg[%d]: %s\n", msg);
+		printf("\nreceived msg[%d]: %s\n", clnt_sock, msg);
 
 		return NULL;
 	}
@@ -149,21 +150,21 @@ void removeDisconnectedClient(int sock)
 	close(sock);
 }
 
-/* send msg to clnt_socket */
-void send_msg(int count, char msg[BUF_SIZE], int clnt_sock)
-{
-	int send_len;
-	char line[BUF_SIZE];
+// /* send msg to clnt_socket */
+// void sendMsg(int count, char msg[BUF_SIZE], int clnt_sock)
+// {
+// 	int send_len;
+// 	char line[BUF_SIZE];
 
-	// send line count and origin msg 
-	send_len = write(clnt_sock, &count, sizeof(int));
-	send_len = write(clnt_sock, msg, BUF_SIZE);
+// 	// send line count and origin msg 
+// 	send_len = write(clnt_sock, &count, sizeof(int));
+// 	send_len = write(clnt_sock, msg, BUF_SIZE);
 
-	for (int i = 0; i < count; i++) {
-		printf("%s\n", line);
-		send_len = write(clnt_sock, line, BUF_SIZE);
-	}
-}
+// 	for (int i = 0; i < count; i++) {
+// 		printf("%s\n", line);
+// 		send_len = write(clnt_sock, line, BUF_SIZE);
+// 	}
+// }
 
 
 /* bubble sort for Result */
