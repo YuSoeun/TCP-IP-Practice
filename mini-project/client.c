@@ -24,16 +24,16 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <pthread.h>
-#include "Console.h"
 
+#include "Console.h"
 #include "client_server.h"
 #include "socket.h"
 
 // #define BUF_SIZE 1024
-void* acceptReceiver(int* clnt_sock);
-void* connectReceiver(SocketInfo * recv_info);
-void* sendMsg(void * arg);
-void* recvSeg(void * arg);
+void* acceptReceiver(void* arg);
+void* connectReceiver(void* arg);
+void* sendMsg(void* arg);
+void* recvSeg(void* arg);
 
 int recv_cnt = 0;
 int total_recv = __INT_MAX__;
@@ -96,29 +96,35 @@ int client(int listen_port, char* ip, int port)
     // receiver 갯수 받기
     read(serv_sock, &total_recv, sizeof(int));
     recv_socks = (int*)malloc(sizeof(int) * total_recv);
+    printf("99: total_recv: %d\n", total_recv);
 
     read(serv_sock, &recv_num, sizeof(int));
     other_recv_info = (SocketInfo **)malloc(sizeof(SocketInfo*) * recv_num);
 	for (int i = 0; i < recv_num; i++) {
 		other_recv_info[i] = (SocketInfo *)malloc(sizeof(SocketInfo));
 	}
+    printf("recv_num: %d\n", recv_num);
     
     // Sender에서 receiver_sock 정보 받기
     for (int i = 0; i < recv_num; i++) {
         readSocketInfo(serv_sock, other_recv_info[i]);
 
+        printf("socketInfo ip: %s, port: %d, id: %d\n", other_recv_info[i]->ip, other_recv_info[i]->listen_port, other_recv_info[i]->id);
+
         // 다른 Receiver connect하는 thread
-        pthread_create(&cnct_thread, NULL, connectReceiver, (void*)&other_recv_info[i]);
+        pthread_create(&cnct_thread, NULL, connectReceiver, (void*)other_recv_info[i]);
 
         // 다른 Receiver segment read하는 thread
-        pthread_create(&rcv_thread, NULL, recvSeg, (void*)&other_recv_info[i]);
+        // pthread_create(&rcv_thread, NULL, recvSeg, (void*)&other_recv_info[i]);
     }
+    pthread_join(acpt_thread, &thread_return);
+    pthread_join(cnct_thread, &thread_return);
 
-    if (recv_cnt >= total_recv) {
-        printf("Init complete\n");
-        memcpy(msg, "Init complete", BUF_SIZE);
-        write(serv_sock, msg, BUF_SIZE);
-    }
+    // if (recv_cnt >= total_recv) {
+    //     printf("Init complete\n");
+    //     memcpy(msg, "Init complete", BUF_SIZE);
+    //     write(serv_sock, msg, BUF_SIZE);
+    // }
 
     // // 다른 Receiver 에게 받은 seg
     // for (int i = 0; i < recv_num; i++) {
@@ -128,34 +134,47 @@ int client(int listen_port, char* ip, int port)
     
     // Client console 출력
     // clrscr();
-    // while (1) {
-
-    // }
-
-    pthread_join(snd_thread, &thread_return);
-    pthread_join(rcv_thread, &thread_return);
+    
+    
+    // pthread_join(snd_thread, &thread_return);
+    // pthread_join(rcv_thread, &thread_return);
     close(clnt_sock);
 
     return 0;
 }
 
-void* acceptReceiver(int* clnt_sock)
+void* acceptReceiver(void* arg)
 {
+    printf("void* acceptReceiver(void* arg)\n");
+    int* clnt_sock = (int*)arg;
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_adr;
 
-    while (recv_cnt >= total_recv) {
+    while (recv_cnt < total_recv-1) {
+        printf("154: while (recv_cnt < total_recv-1) {\n");
         recv_adr_sz = sizeof(recv_adr);
         recv_sock = accept(*clnt_sock, (struct sockaddr*)&recv_adr, &recv_adr_sz);
+
+        if (recv_sock == -1)
+            error_handling("accept() error");
+
+        printf("157: accept\n");
 
         pthread_mutex_lock(&clnt_mutx);
 		recv_socks[recv_cnt++] = recv_sock;
 		pthread_mutex_unlock(&clnt_mutx);
+        printf("recv_cnt (accept): %d(accept %d)\n", recv_cnt, recv_sock);
+
+        printf("Connected client IP: %s, port: %d\n", inet_ntoa(recv_adr.sin_addr), (int)recv_adr.sin_port);
     }
+
+    return NULL;
 }
 
-void* connectReceiver(SocketInfo * recv_info)
+void* connectReceiver(void* arg)
 {
+    SocketInfo* recv_info = (SocketInfo*)arg;
+    
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_addr;
 
@@ -166,12 +185,19 @@ void* connectReceiver(SocketInfo * recv_info)
     inet_aton(recv_info->ip, &recv_addr.sin_addr);
     recv_addr.sin_port = recv_info->listen_port;
 
+    printf("connect ip: %s, port: %d\n", inet_ntoa(recv_addr.sin_addr), recv_addr.sin_port);
+
     if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1)
         error_handling("connect() error");
+
+    printf("Connected client IP: %s, port: %d\n", inet_ntoa(recv_addr.sin_addr), (int)recv_addr.sin_port);
 
     pthread_mutex_lock(&clnt_mutx);
     recv_socks[recv_cnt++] = recv_sock;
     pthread_mutex_unlock(&clnt_mutx);
+    printf("recv_cnt: %d(accept %d)\n", recv_cnt, recv_sock);
+
+    return NULL;
 }
 
 void * sendMsg(void * arg)   // send thread main

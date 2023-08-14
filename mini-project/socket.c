@@ -14,7 +14,7 @@ int readSocketInfo(int sock, SocketInfo* socket_info)
     int buffer;
     char temp[sizeof(SocketInfo)] = {0};
 
-    int str_len = write(sock, socket_info, sizeof(SocketInfo));
+    int str_len = read(sock, socket_info, sizeof(SocketInfo));
     while (str_len < sizeof(SocketInfo)) {
         buffer = read(sock, temp, sizeof(SocketInfo) - str_len);
         str_len += buffer;
