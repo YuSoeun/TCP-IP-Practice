@@ -79,6 +79,9 @@ int client(int listen_port, char* ip, int port)
 	if (connect(serv_sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
 		error_handling("connect() error");
 
+    // 자신 listening port 주기
+    write(serv_sock, listen_port, sizeof(int));
+
     // receiver 갯수 받기 (자신 하나 빼기)
     read(serv_sock, &recv_num, sizeof(int));
     recv_num -= 1;
@@ -93,9 +96,18 @@ int client(int listen_port, char* ip, int port)
     for (int i = 0; i < recv_num; i++) {
         readSocketInfo(serv_sock, other_recv_info[i]);
 
+        // // TODO: 다른 Receiver connect하는 thread
+        // memset(&serv_addr, 0, sizeof(serv_addr));
+        // serv_addr.sin_family = AF_INET;
+        // serv_addr.sin_addr.s_addr = inet_addr(ip);
+        // serv_addr.sin_port = htons(port);
+
+        if (connect(serv_sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
+            error_handling("connect() error");
+
         // 다른 Receiver accept하는 thread 열기
         recv_adr_sz = sizeof(clnt_adr);
-		recv_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr,&recv_adr_sz);
+		recv_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr, &recv_adr_sz);
 
         pthread_mutex_lock(&clnt_mutx);
 		recv_socks[recv_cnt++] = recv_sock;

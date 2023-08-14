@@ -7,7 +7,7 @@ typedef struct socketInfo
 {
     int id;
     char ip[BUF_SIZE];
-    int port;
+    int listen_port;
 } SocketInfo;
 
 int writeSocketInfo(int sock, SocketInfo* socket_info);
