@@ -44,7 +44,8 @@ int client(int listen_port, char* ip, int port)
 {
     int serv_sock, clnt_sock;
 	struct sockaddr_in serv_addr, clnt_adr, recv_addr;
-	pthread_t acpt_thread, cnct_thread, snd_thread, rcv_thread;
+	pthread_t* snd_thread;
+	pthread_t acpt_thread, cnct_thread, rcv_thread;
 	void * thread_return;
     int recv_num;
     int recv_sock, recv_adr_sz;
@@ -68,10 +69,11 @@ int client(int listen_port, char* ip, int port)
 		perror("bind() error");
 	if (listen(clnt_sock, 5) == -1)
 		perror("listen() error");
+    printf("clnt_sock: %d\n", clnt_sock);
     
     int optVal = 1;
 	int optLen = sizeof(optVal);
-	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
+	setsockopt(clnt_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
     // 다른 Receiver accept하는 thread 열기
     pthread_create(&acpt_thread, NULL, acceptReceiver, (void*)&clnt_sock);
@@ -92,9 +94,11 @@ int client(int listen_port, char* ip, int port)
 
     // receiver 갯수 받기
     read(serv_sock, &total_recv, sizeof(int));
+    printf("total_recv: %d\n", total_recv);
     recv_socks = (int*)malloc(sizeof(int) * total_recv);
 
     read(serv_sock, &recv_num, sizeof(int));
+    printf("recv_num: %d\n", recv_num);
     other_recv_info = (SocketInfo **)malloc(sizeof(SocketInfo*) * recv_num);
 	for (int i = 0; i < recv_num; i++) {
 		other_recv_info[i] = (SocketInfo *)malloc(sizeof(SocketInfo));
@@ -103,23 +107,25 @@ int client(int listen_port, char* ip, int port)
     // Sender에서 receiver_sock 정보 받기
     for (int i = 0; i < recv_num; i++) {
         readSocketInfo(serv_sock, other_recv_info[i]);
+        // printf("sender - ip:%s, port:%d, id:%d\n", other_recv_info[i]->ip, other_recv_info[i]->listen_port,other_recv_info[i]->id);
 
         // 다른 Receiver connect하는 thread
-        pthread_create(&cnct_thread, NULL, connectReceiver, (void*)&other_recv_info[i]);
+        pthread_create(&cnct_thread, NULL, connectReceiver, (void*)other_recv_info[i]);
 
         // 다른 Receiver segment read하는 thread
         pthread_create(&rcv_thread, NULL, recvSeg, (void*)&other_recv_info[i]);
     }
 
-    if (recv_cnt >= total_recv) {
-        printf("Init complete\n");
-        memcpy(msg, "Init complete", BUF_SIZE);
-        write(serv_sock, msg, BUF_SIZE);
-    }
+    // if (recv_cnt >= total_recv) {
+    //     printf("Init complete\n");
+    //     memcpy(msg, "Init complete", BUF_SIZE);
+    //     write(serv_sock, msg, BUF_SIZE);
+    // }
 
     // // 다른 Receiver 에게 받은 seg
+    // snd_thread = (pthread_t *)malloc(sizeof(pthread_t));
     // for (int i = 0; i < recv_num; i++) {
-    //     pthread_create(&snd_thread, NULL, sendMsg, (void*)&other_recv_info[i]);
+    //     pthread_create(&snd_thread[i], NULL, sendMsg, (void*)&other_recv_info[i]);
     // }
     
     
@@ -129,8 +135,8 @@ int client(int listen_port, char* ip, int port)
 
     // }
 
-    pthread_join(snd_thread, &thread_return);
-    pthread_join(rcv_thread, &thread_return);
+    pthread_join(acpt_thread, &thread_return);
+    pthread_join(cnct_thread, &thread_return);
     close(clnt_sock);
 
     return 0;
@@ -138,17 +144,26 @@ int client(int listen_port, char* ip, int port)
 
 void* acceptReceiver(void * arg)
 {
+    int* clnt_sock = (int *)arg;
+    printf("void* acceptReceiver\n");
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_adr;
-    int* clnt_sock = (int *)arg;
 
-    while (recv_cnt >= total_recv) {
+    while (recv_cnt < total_recv-1) {
         recv_adr_sz = sizeof(recv_adr);
-        recv_sock = accept(*clnt_sock, (struct sockaddr*)&recv_adr, &recv_adr_sz);
+        printf("accept: %d (acceptReceiver - clnt_sock)\n", *clnt_sock);
+        // recv_sock = accept(*clnt_sock, (struct sockaddr*)&recv_adr, &recv_adr_sz);
+        if ((recv_sock = accept(*clnt_sock, (struct sockaddr*)&recv_adr, &recv_adr_sz)) == -1) {
+            perror("accept error");
+        }
 
+        printf("recv_cnt: %d (acceptReceiver - before)", recv_cnt);
         pthread_mutex_lock(&clnt_mutx);
 		recv_socks[recv_cnt++] = recv_sock;
 		pthread_mutex_unlock(&clnt_mutx);
+        recv_cnt++;
+        printf("recv_cnt: %d (acceptReceiver) - after", recv_cnt);
+
     }
 }
 
@@ -158,20 +173,28 @@ void* connectReceiver(void* arg)
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_addr;
 
-    recv_sock = socket(PF_INET, SOCK_STREAM, 0);
+    if ((recv_sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket set error");
+    }
     
     memset(&recv_addr, 0, sizeof(recv_addr));
     recv_addr.sin_family = AF_INET;
-    inet_aton(recv_info->ip, &recv_addr.sin_addr);
-    recv_addr.sin_port = recv_info->listen_port;
+    // inet_aton(recv_info->ip, &recv_addr.sin_addr);
+    recv_addr.sin_addr.s_addr = inet_addr(recv_info->ip);
+    recv_addr.sin_port = htons(recv_info->listen_port);
+
+    // printf("sender - ip:%s, port:%d\n", recv_info->ip, recv_info->listen_port);
+    printf("sender - ip:%s, port:%d\n", inet_ntoa(recv_addr.sin_addr), recv_addr.sin_port);
 
     if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1)
         perror("connect() error");
-        // error_handling("connect() error");
+
+    printf("recv_cnt: %d (connectReceiver - before)\n", recv_cnt);
 
     pthread_mutex_lock(&clnt_mutx);
     recv_socks[recv_cnt++] = recv_sock;
     pthread_mutex_unlock(&clnt_mutx);
+    printf("recv_cnt: %d (connectReceiver - after)\n", recv_cnt);
 }
 
 void * sendMsg(void * arg)   // send thread main

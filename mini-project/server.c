@@ -113,7 +113,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	}
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
-		printf("thread[%d] return %p", i, thread_return);
+		printf("thread[%d] return %p\n", i, thread_return);
 	}
 
 	close(serv_sock);
