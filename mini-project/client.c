@@ -112,11 +112,12 @@ int client(int listen_port, char* ip, int port)
         pthread_create(&rcv_thread, NULL, recvSeg, (void*)&other_recv_info[i]);
     }
     // 파일 이름, segment 총 수 받기
-    int fnamesize, total_seg;
+    int fname_size, total_seg;
     char* filename;
 
-    read(serv_sock, &fnamesize, sizeof(int));
-    recvStr(serv_sock, filename, fnamesize);
+    read(serv_sock, &fname_size, sizeof(int));
+    filename = malloc(fname_size);
+    recvStr(serv_sock, filename, fname_size);
     read(serv_sock, &total_seg, sizeof(int));
 
     pthread_join(acpt_thread, &thread_return);

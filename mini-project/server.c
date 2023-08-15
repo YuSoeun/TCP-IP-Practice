@@ -127,8 +127,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 				writeSocketInfo(clnt_socks[i], clnt_info[j]);
 		}
 		// 파일 이름, segment 총 수 보내주기
-		write(clnt_socks[i], (int)strlen(filename), sizeof(int));
-		write(clnt_socks[i], &filename, strlen(filename));
+		int fname_size = (int)strlen(filename);
+		write(clnt_socks[i], &fname_size, sizeof(int));
+		write(clnt_socks[i], filename, strlen(filename));
 		write(clnt_socks[i], &total_seg, sizeof(int));
 	}
 	for (int i = 0; i < recv_num; i++) {
