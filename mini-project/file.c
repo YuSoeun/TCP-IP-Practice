@@ -2,45 +2,56 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+
+#include <sys/stat.h>
 #include "file.h"
 
+/* return file size*/
+int filesize(const char *filename)
+{
+    struct stat file_info;
+    int sz_file;
+
+    if (0 > stat(filename, &file_info)){
+	    return -1; // file이 없거나 에러
+    }
+    return file_info.st_size;
+}
+
 /* open file and save in trie structure */
-// void openFileAndSaveTrie(char filename[WORD_SIZE], Trie* trie)
-// {
-// 	char **split_line;
-// 	FILE * fp;
-// 	char line[BUF_SIZE];
-// 	char data[BUF_SIZE];
-// 	int count;
+void Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
+{
+	char **split_line;
+	FILE * fp;
+	char * content;
+	int fsize, i = 0;
 
-// 	if ((fp = fopen(filename, "rb")) == NULL) {
-// 		printf("Failed to open file.\n");
-// 	} else {
-// 		printf("file content is\n");
-// 		printf("---------------\n");
+    content = (char *)malloc(seg_size);
+
+	if ((fp = fopen(filename, "rb")) == NULL) {
+		printf("Failed to open file.\n");
+	} else {
+		printf("file content is\n");
+		printf("---------------\n");
 		
-// 		while (feof(fp) == 0) {
-// 			count = 0;
-// 			fgets(line, BUF_SIZE, fp);
-// 			printf("%s", line);
+        // segment 다 읽고 저장
+		while (feof(fp) == 0) {
+			fsize = fread(content, 1, seg_size, fp);
+            content[fsize] = 0;
+			printf("[%d] %s\n", i, content);
 
-// 			split_line = split(line, " ", &count);
-// 			strcpy(data, split_line[0]);
-// 			for (int i = 1; i < count-1; i++) {
-// 				strcat(data, " ");
-// 				strcat(data, split_line[i]);
-// 			}
-// 			strncat(data, "\0", 1);
+            segment[i]->content = (char *)malloc(seg_size);
 
-// 			for (int i = 0; i < strlen(data); i++) {
-// 				data[i] = tolower(data[i]);
-// 			}
-			
-// 			insert(trie, data, atoi(split_line[count-1]));
-// 		}
-// 		printf("\n\n");
-// 	}
-// }
+            segment[i]->seq = i;
+            memcpy(segment[i]->content, content, seg_size);
+            segment[i]->size = fsize;
+
+			// printf("[%d] %s(%d)\n", segment[i]->seq, segment[i]->content), segment[i]->size;
+            i++;
+		}
+		printf("\n\n");
+	}
+}
 
 /* split string with delimiter */
 char** split(char* str, const char* delimiter, int* count) {
