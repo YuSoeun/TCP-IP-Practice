@@ -94,7 +94,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	printf("total_seg: %d\n", total_seg);
 
 	// open file and save in segments
-	Savefile2Seg(filename, segment, seg_size);
+	total_seg = Savefile2Seg(filename, segment, seg_size);
 	printf("file end\n");
 
 	// accept receviers
@@ -127,19 +127,43 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 				writeSocketInfo(clnt_socks[i], clnt_info[j]);
 		}
 		// 파일 이름, segment 총 수 보내주기
-		int fname_size = (int)strlen(filename);
+		int fname_size = (int)strlen(filename) + 1;
+		printf("fname_size: %d\n", fname_size);
 		write(clnt_socks[i], &fname_size, sizeof(int));
-		write(clnt_socks[i], filename, strlen(filename));
+		printf("filename: %s\n", filename);
+		write(clnt_socks[i], filename, fname_size);
+		printf("seg_size: %d\n", seg_size);
+		write(clnt_socks[i], &seg_size, sizeof(int));
+		printf("total_seg: %d\n", total_seg);
 		write(clnt_socks[i], &total_seg, sizeof(int));
 	}
+
+	int seg_num = total_seg/recv_num;
+	int remain = total_seg%recv_num;
+
+	// init complete 다 받았는지 확인
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
 		printf("thread[%d] return %p\n", i, thread_return);
+
+		// 각 receiver가 받을 segment 수 보내주기
+		
+		if (remain > 0) {
+			int tmp = seg_num + 1;
+			write(clnt_socks[i], &tmp, sizeof(int));
+			remain--;
+		} else {
+			write(clnt_socks[i], &seg_num, sizeof(int));
+		}
+		
 	}
 
-	// filename 보내주기
-	// segment 총 수 보내주기
-	// segment RR로 나눠주기
+	// segment RR로 나눠서 보내주기
+	for (int i = 0; i < total_seg; i++) {
+		int clnt_index = i%recv_num;
+		writeSegmentInfo(clnt_socks[clnt_index], segment[i]);
+		printf("write segment[%d]: %s\n", i, segment[i]->content);
+	}
 
 	close(serv_sock);
 
@@ -153,12 +177,10 @@ void * readClntMsg(void * arg)
 	int str_len = 0, i;
 	char msg[BUF_SIZE] = {};
 	
-	for (int i = 0; i < clnt_cnt; i++) {
-		recvStr(clnt_sock, msg, BUF_SIZE);
-		printf("\nreceived msg[%d]: %s\n", clnt_sock, msg);
+	recvStr(clnt_sock, msg, BUF_SIZE);
+	printf("\nreceived msg[%d]: %s\n", clnt_sock, msg);
 
-		return NULL;
-	}
+	return NULL;
 }
 
 void removeDisconnectedClient(int sock)

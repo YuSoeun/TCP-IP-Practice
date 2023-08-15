@@ -24,11 +24,13 @@
 #include "Console.h"
 #include "client_server.h"
 #include "socket.h"
+#include "file.h"
 
 // #define BUF_SIZE 1024
 void* acceptReceiver(void* arg);
 void* connectReceiver(void* arg);
 void* sendMsg(void * arg);
+void* getSegmentFromSock(int serv_sock, int seg2RecvNum, int seg_size);
 void* recvSeg(void * arg);
 
 int recv_cnt = 0;
@@ -40,12 +42,15 @@ char msg[BUF_SIZE] = {};
 SocketInfo ** other_recv_info;
 pthread_mutex_t clnt_mutx;
 
+Segment** segment;
+int* flag;
+
 int client(int listen_port, char* ip, int port)
 {
     int serv_sock, clnt_sock;
 	struct sockaddr_in serv_addr, clnt_adr, recv_addr;
-	pthread_t acpt_thread, snd_thread, rcv_thread;
-	pthread_t* cnct_thread;
+	pthread_t acpt_thread, rcv_thread;
+	pthread_t* cnct_thread, snd_thread;
 	void * thread_return;
     int recv_num;
     int recv_sock, recv_adr_sz;
@@ -69,7 +74,6 @@ int client(int listen_port, char* ip, int port)
 		perror("bind() error");
 	if (listen(clnt_sock, 5) == -1)
 		perror("listen() error");
-    printf("clnt_sock: %d\n", clnt_sock);
     
     int optVal = 1;
 	int optLen = sizeof(optVal);
@@ -108,7 +112,6 @@ int client(int listen_port, char* ip, int port)
     // Sender에서 receiver_sock 정보 받기
     for (int i = 0; i < recv_num; i++) {
         readSocketInfo(serv_sock, other_recv_info[i]);
-        // printf("sender - ip:%s, port:%d, id:%d\n", other_recv_info[i]->ip, other_recv_info[i]->listen_port,other_recv_info[i]->id);
 
         // 다른 Receiver connect하는 thread
         pthread_create(&cnct_thread[i], NULL, connectReceiver, (void*)other_recv_info[i]);
@@ -117,36 +120,52 @@ int client(int listen_port, char* ip, int port)
         pthread_create(&rcv_thread, NULL, recvSeg, (void*)other_recv_info[i]);
     }
     // 파일 이름, segment 총 수 받기
-    int fname_size, total_seg;
+    int fname_size, total_seg, seg_size;
     char* filename;
 
     read(serv_sock, &fname_size, sizeof(int));
     filename = malloc(fname_size);
     recvStr(serv_sock, filename, fname_size);
+    read(serv_sock, &seg_size, sizeof(int));
+    printf("seg_size: %d\n", seg_size);
     read(serv_sock, &total_seg, sizeof(int));
+    printf("total_seg: %d\n", total_seg);
 
     // connect thread 끝났는지 확인
-    pthread_join(acpt_thread, &thread_return);
+    while (recv_cnt < total_recv-1) {
+        ;
+    }
+    
     for (int i = 0; i < recv_num; i++) {
         pthread_join(cnct_thread[i], &thread_return);
     }
+    pthread_detach(acpt_thread);
+    
+    // 미리 segment, flag malloc
+    flag = (int *)malloc(total_seg * sizeof(int));
+    memset(flag, 0, total_seg * sizeof(int));
+    segment = (Segment **)malloc(sizeof(Segment *) * total_seg);
+    for (int i = 0; i < total_seg; i++) {
+		segment[i] = (Segment *)malloc(sizeof(Segment));
+	}
 
-    // if (recv_cnt >= total_recv) {
-    //     printf("Init complete\n");
-    //     memcpy(msg, "Init complete", BUF_SIZE);
-    //     write(serv_sock, msg, BUF_SIZE);
-    // }
+    // Sender에게 init complete flag 보내기
+    printf("Init complete\n");
+    memcpy(msg, "Init complete", BUF_SIZE);
+    write(serv_sock, msg, BUF_SIZE);
 
-    // // 다른 Receiver 에게 받은 seg
+    // 다른 Receiver 에게 seg 받는 thread?
     // snd_thread = (pthread_t *)malloc(sizeof(pthread_t));
-    // for (int i = 0; i < recv_num; i++) {
-    //     pthread_create(&snd_thread[i], NULL, sendMsg, (void*)&other_recv_info[i]);
-    // }
     
+    int seg2RecvNum;
+    read(serv_sock, &seg2RecvNum, sizeof(int));
+    printf("seg2RecvNum: %d\n", seg2RecvNum);
+    getSegmentFromSock(serv_sock, seg2RecvNum, seg_size);
+
+    // TODO: Receiver끼리 열기
+    // TODO: pthreadCreate 다른 receiver들에게 배분
     
-    // Client console 출력
-    // clrscr();
-    // while (1) {
+    // TODO: Receiver 진행상황 console 출력
 
     // }
     
@@ -175,6 +194,7 @@ void* acceptReceiver(void * arg)
             printf("recv_cnt: %d (acceptReceiver - after)\n", recv_cnt);
         }
     }
+    printf("accept end\n");
 }
 
 void* connectReceiver(void* arg)
@@ -194,7 +214,7 @@ void* connectReceiver(void* arg)
     recv_addr.sin_port = htons(recv_info->listen_port);
 
     // printf("sender - ip:%s, port:%d\n", recv_info->ip, recv_info->listen_port);
-    printf("sender - ip:%s, port:%d\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port));
+    // printf("sender - ip:%s, port:%d\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port));
 
     if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1) {
         perror("connect() error");
@@ -205,76 +225,39 @@ void* connectReceiver(void* arg)
         pthread_mutex_unlock(&clnt_mutx);
         printf("recv_cnt: %d (connectReceiver - after)\n", recv_cnt);
     }
+    printf("connect end\n");
 }
 
-void * sendMsg(void * arg)   // send thread main
+void *getSegmentFromSock(int serv_sock, int seg2RecvNum, int seg_size)
 {
-    // char alpha;
+    int seq = 0;
+    int i = 0;
+    Segment* tmp_seg = (Segment *)malloc(sizeof(Segment));
+    tmp_seg->content = (char *)malloc(seg_size);
+    char * content = (char* )(malloc(seg_size));
 
-	// int sock = *((int*)arg);
-	// while(1) {
-    //     gotoxy(12+len, 1);
-	// 	alpha = getch();
-    //     printf("%c", alpha);
-        
-    //     if ((alpha == 127 || alpha == 8)) {       // backspace
-    //         if (len > 0) {
-    //             len--;
-    //         }
-    //     } else { 
-    //         search_word[len++] = alpha;
-    //     }
-    //     search_word[len] = 0;
+    // seg server로부터 받기
+    while (i < seg2RecvNum) {
+        readSegmentInfo(serv_sock, tmp_seg, content, seg_size);
+        // pthread_create(&snd_thread[i], NULL, sendMsg, (void*)&other_recv_info[i]);
+        // printf("seg[%d]: %s (%d)\n", tmp_seg->seq, content, tmp_seg->size);
+        seq = tmp_seg->seq;
+        segment[seq] = (Segment *)malloc(sizeof(Segment));
+        segment[seq]->content = (char *)malloc(seg_size);
 
-	// 	if (!strcmp(search_word,"q\n")||!strcmp(search_word,"Q\n")) {
-	// 		close(sock);
-	// 		exit(0);
-	// 	}
+        segment[seq]->seq = tmp_seg->seq;
+        memcpy(segment[seq]->content, content, seg_size);
+        segment[seq]->size = tmp_seg->size;
+        // memcpy(segment[seq], tmp_seg, sizeof(Segment*));
+        printf("seg[%d]: %s (%d)\n", segment[seq]->seq, segment[seq]->content, segment[seq]->size);
+        flag[seq] = 1;
+        i++;
+    }
 
-	// 	write(sock, search_word, strlen(search_word));
-    //     clrscr();
-	// }
-	return NULL;
+    return NULL;
 }
-	
-void * recvSeg(void * arg)   // read thread main
+
+void* recvSeg(void * arg)
 {
-	// int sock = *((int*)arg);
-    // int count, buffer;
-    // char line[BUF_SIZE];
-    // char msg[BUF_SIZE];
-    // char temp[BUF_SIZE] = {0};
-	// int str_len;
-    // char *index;
-
-	// while (1) {
-	// 	str_len = read(sock, &count, sizeof(int));
-	// 	str_len = read(sock, msg, BUF_SIZE);
-
-	// 	if (str_len == -1) 
-	// 		return (void*) -1;
-        
-    //     for (int i = 0; i < count; i++) {
-	// 	    str_len = read(sock, line, BUF_SIZE);
-
-    //         while (str_len < BUF_SIZE) {
-    //             buffer = read(sock, temp, BUF_SIZE - str_len);
-    //             str_len += buffer;
-    //         }
-
-    //         index = strstr(line, msg);
-    //         gotoxy(3, 6+i);
-    //         for (int i = 0; i < strlen(line); i++) {
-    //             if (&line[i] >= index && &line[i] < index + strlen(msg)) {
-    //                 printf("\033[38;2;130;150;200m%c", line[i]);
-    //             } else {
-    //                 printf("\033[38;2;255;255;255m%c", line[i]);
-    //             }
-    //         }
-    //         printf("\n");
-    //     }
-	// }
-	// 	msg[str_len] = 0;
-
-	return NULL;
+    return NULL;
 }

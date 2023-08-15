@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/stat.h>
 #include "file.h"
@@ -19,12 +20,12 @@ int filesize(const char *filename)
 }
 
 /* open file and save in trie structure */
-void Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
+int Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 {
 	char **split_line;
 	FILE * fp;
 	char * content;
-	int fsize, i = 0;
+	int fsize, count = 0;
 
     content = (char *)malloc(seg_size);
 
@@ -38,18 +39,19 @@ void Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 		while (feof(fp) == 0) {
 			fsize = fread(content, 1, seg_size, fp);
             content[fsize] = 0;
-			printf("[%d] %s\n", i, content);
+			printf("[%d] %s\n", count, content);
 
-            segment[i]->content = (char *)malloc(seg_size);
+            segment[count]->content = (char *)malloc(seg_size);
 
-            segment[i]->seq = i;
-            memcpy(segment[i]->content, content, seg_size);
-            segment[i]->size = fsize;
+            segment[count]->seq = count;
+            memcpy(segment[count]->content, content, seg_size);
+            segment[count]->size = fsize;
 
-			// printf("[%d] %s(%d)\n", segment[i]->seq, segment[i]->content), segment[i]->size;
-            i++;
+            count++;
 		}
 	}
+
+    return count;
 }
 
 /* split string with delimiter */
@@ -68,4 +70,31 @@ char** split(char* str, const char* delimiter, int* count) {
     }
 
     return result;
+}
+
+int writeSegmentInfo(int sock, Segment* seg_info)
+{
+    int str_len = write(sock, seg_info, sizeof(Segment));
+    str_len += write(sock, seg_info->content, seg_info->size);
+
+    return str_len;
+}
+
+int readSegmentInfo(int sock, Segment* seg_info, char * content, int seg_size)
+{
+    int buffer;
+    char temp[seg_size];
+
+    int str_len = read(sock, seg_info, sizeof(Segment));
+    while (str_len < sizeof(Segment)) {
+        buffer = read(sock, temp, sizeof(Segment) - str_len);
+        str_len += buffer;
+        printf("temp: %s\n", temp);
+    }
+
+    int content_len = read(sock, content, seg_info->size);
+    content[content_len] = 0;
+    // printf("seg[%d]: %s (%d)\n", seg_info->seq, content, seg_info->size);
+
+    return str_len;
 }
