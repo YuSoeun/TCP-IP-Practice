@@ -48,12 +48,15 @@ void * handleClnt(void * arg);
 int server(int listen_port, int recv_num, char* filename, int seg_size)
 {
     int serv_sock, clnt_sock;
-	struct sockaddr_in serv_adr, clnt_adr;
 	int clnt_adr_sz;
+	struct sockaddr_in serv_adr, clnt_adr;
+	
 	pthread_t t_id;
 	pthread_t *clnt_thread;
-	char ** result;
 	void * thread_return;
+	Segment ** segment;
+
+	int total_seg = 0;
 
 	clnt_info = (SocketInfo **)malloc(sizeof(SocketInfo*) * recv_num);
 	for (int i = 0; i < recv_num; i++) {
@@ -71,7 +74,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serv_adr.sin_port = htons(listen_port);
 	
-	if (bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr))==-1)
+	if (bind(serv_sock, (struct sockaddr*) &serv_adr, sizeof(serv_adr)) == -1)
 		error_handling("bind() error");
 	if (listen(serv_sock, 5)==-1)
 		error_handling("listen() error");
@@ -80,8 +83,21 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	int optLen = sizeof(optVal);
 	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
-	// TODO: open file and save in segments (seg 수, 파일 이름 따로라도 저장해서 보내주기)
+	// (file size 총 수 / seg_size)해서 총 segment 갯수 구하기
+	total_seg = filesize(filename);
+	total_seg = total_seg/seg_size + 1;
+	segment = (Segment **)malloc(sizeof(Segment *) * total_seg);
+	for (int i = 0; i < total_seg; i++) {
+		segment[i] = (Segment *)malloc(sizeof(Segment));
+	}
+	printf("seg_size: %d\n", seg_size);
+	printf("total_seg: %d\n", total_seg);
 
+	// open file and save in segments
+	Savefile2Seg(filename, segment, seg_size);
+	printf("file end\n");
+
+	// accept receviers
 	for (int i = 0; i < recv_num; i++) {
 		clnt_adr_sz = sizeof(clnt_adr);
 		clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_adr, &clnt_adr_sz);
@@ -110,11 +126,19 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 			if (i < j)
 				writeSocketInfo(clnt_socks[i], clnt_info[j]);
 		}
+		// 파일 이름, segment 총 수 보내주기
+		write(clnt_socks[i], (int)strlen(filename), sizeof(int));
+		write(clnt_socks[i], &filename, strlen(filename));
+		write(clnt_socks[i], &total_seg, sizeof(int));
 	}
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
 		printf("thread[%d] return %p\n", i, thread_return);
 	}
+
+	// filename 보내주기
+	// segment 총 수 보내주기
+	// segment RR로 나눠주기
 
 	close(serv_sock);
 

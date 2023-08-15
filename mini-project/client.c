@@ -44,8 +44,13 @@ int client(int listen_port, char* ip, int port)
 {
     int serv_sock, clnt_sock;
 	struct sockaddr_in serv_addr, clnt_adr, recv_addr;
+<<<<<<< HEAD
 	pthread_t* snd_thread;
 	pthread_t acpt_thread, cnct_thread, rcv_thread;
+=======
+	pthread_t acpt_thread, snd_thread, rcv_thread;
+	pthread_t* cnct_thread;
+>>>>>>> 0499719b304c719e75f189cba5abd69b3279f48d
 	void * thread_return;
     int recv_num;
     int recv_sock, recv_adr_sz;
@@ -110,10 +115,26 @@ int client(int listen_port, char* ip, int port)
         // printf("sender - ip:%s, port:%d, id:%d\n", other_recv_info[i]->ip, other_recv_info[i]->listen_port,other_recv_info[i]->id);
 
         // 다른 Receiver connect하는 thread
+<<<<<<< HEAD
         pthread_create(&cnct_thread, NULL, connectReceiver, (void*)other_recv_info[i]);
+=======
+        pthread_create(&cnct_thread[i], NULL, connectReceiver, (void*)other_recv_info[i]);
+>>>>>>> 0499719b304c719e75f189cba5abd69b3279f48d
 
         // 다른 Receiver segment read하는 thread
         pthread_create(&rcv_thread, NULL, recvSeg, (void*)&other_recv_info[i]);
+    }
+    // 파일 이름, segment 총 수 받기
+    int fnamesize, total_seg;
+    char* filename;
+
+    read(serv_sock, &fnamesize, sizeof(int));
+    recvStr(serv_sock, filename, fnamesize);
+    read(serv_sock, &total_seg, sizeof(int));
+
+    pthread_join(acpt_thread, &thread_return);
+    for (int i = 0; i < recv_num; i++) {
+        pthread_join(cnct_thread[i], &thread_return);
     }
 
     // if (recv_cnt >= total_recv) {
