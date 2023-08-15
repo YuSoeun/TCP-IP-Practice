@@ -49,7 +49,6 @@ void Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 			// printf("[%d] %s(%d)\n", segment[i]->seq, segment[i]->content), segment[i]->size;
             i++;
 		}
-		printf("\n\n");
 	}
 }
 

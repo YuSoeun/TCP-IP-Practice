@@ -44,13 +44,8 @@ int client(int listen_port, char* ip, int port)
 {
     int serv_sock, clnt_sock;
 	struct sockaddr_in serv_addr, clnt_adr, recv_addr;
-<<<<<<< HEAD
-	pthread_t* snd_thread;
-	pthread_t acpt_thread, cnct_thread, rcv_thread;
-=======
 	pthread_t acpt_thread, snd_thread, rcv_thread;
 	pthread_t* cnct_thread;
->>>>>>> 0499719b304c719e75f189cba5abd69b3279f48d
 	void * thread_return;
     int recv_num;
     int recv_sock, recv_adr_sz;
@@ -104,6 +99,7 @@ int client(int listen_port, char* ip, int port)
 
     read(serv_sock, &recv_num, sizeof(int));
     printf("recv_num: %d\n", recv_num);
+    cnct_thread = (pthread_t *)malloc(sizeof(recv_num));
     other_recv_info = (SocketInfo **)malloc(sizeof(SocketInfo*) * recv_num);
 	for (int i = 0; i < recv_num; i++) {
 		other_recv_info[i] = (SocketInfo *)malloc(sizeof(SocketInfo));
@@ -115,14 +111,10 @@ int client(int listen_port, char* ip, int port)
         // printf("sender - ip:%s, port:%d, id:%d\n", other_recv_info[i]->ip, other_recv_info[i]->listen_port,other_recv_info[i]->id);
 
         // 다른 Receiver connect하는 thread
-<<<<<<< HEAD
-        pthread_create(&cnct_thread, NULL, connectReceiver, (void*)other_recv_info[i]);
-=======
         pthread_create(&cnct_thread[i], NULL, connectReceiver, (void*)other_recv_info[i]);
->>>>>>> 0499719b304c719e75f189cba5abd69b3279f48d
 
         // 다른 Receiver segment read하는 thread
-        pthread_create(&rcv_thread, NULL, recvSeg, (void*)&other_recv_info[i]);
+        pthread_create(&rcv_thread, NULL, recvSeg, (void*)other_recv_info[i]);
     }
     // 파일 이름, segment 총 수 받기
     int fname_size, total_seg;
@@ -133,6 +125,7 @@ int client(int listen_port, char* ip, int port)
     recvStr(serv_sock, filename, fname_size);
     read(serv_sock, &total_seg, sizeof(int));
 
+    // connect thread 끝났는지 확인
     pthread_join(acpt_thread, &thread_return);
     for (int i = 0; i < recv_num; i++) {
         pthread_join(cnct_thread[i], &thread_return);
@@ -156,9 +149,7 @@ int client(int listen_port, char* ip, int port)
     // while (1) {
 
     // }
-
-    pthread_join(acpt_thread, &thread_return);
-    pthread_join(cnct_thread, &thread_return);
+    
     close(clnt_sock);
 
     return 0;
@@ -167,7 +158,6 @@ int client(int listen_port, char* ip, int port)
 void* acceptReceiver(void * arg)
 {
     int* clnt_sock = (int *)arg;
-    printf("void* acceptReceiver\n");
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_adr;
 
@@ -177,15 +167,13 @@ void* acceptReceiver(void * arg)
         // recv_sock = accept(*clnt_sock, (struct sockaddr*)&recv_adr, &recv_adr_sz);
         if ((recv_sock = accept(*clnt_sock, (struct sockaddr*)&recv_adr, &recv_adr_sz)) == -1) {
             perror("accept error");
+        } else {
+            printf("recv_cnt: %d (acceptReceiver - before)\n", recv_cnt);
+            pthread_mutex_lock(&clnt_mutx);
+            recv_socks[recv_cnt++] = recv_sock;
+            pthread_mutex_unlock(&clnt_mutx);
+            printf("recv_cnt: %d (acceptReceiver - after)\n", recv_cnt);
         }
-
-        printf("recv_cnt: %d (acceptReceiver - before)", recv_cnt);
-        pthread_mutex_lock(&clnt_mutx);
-		recv_socks[recv_cnt++] = recv_sock;
-		pthread_mutex_unlock(&clnt_mutx);
-        recv_cnt++;
-        printf("recv_cnt: %d (acceptReceiver) - after", recv_cnt);
-
     }
 }
 
@@ -206,17 +194,17 @@ void* connectReceiver(void* arg)
     recv_addr.sin_port = htons(recv_info->listen_port);
 
     // printf("sender - ip:%s, port:%d\n", recv_info->ip, recv_info->listen_port);
-    printf("sender - ip:%s, port:%d\n", inet_ntoa(recv_addr.sin_addr), recv_addr.sin_port);
+    printf("sender - ip:%s, port:%d\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port));
 
-    if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1)
+    if (connect(recv_sock, (struct sockaddr*)&recv_addr, sizeof(recv_addr)) == -1) {
         perror("connect() error");
-
-    printf("recv_cnt: %d (connectReceiver - before)\n", recv_cnt);
-
-    pthread_mutex_lock(&clnt_mutx);
-    recv_socks[recv_cnt++] = recv_sock;
-    pthread_mutex_unlock(&clnt_mutx);
-    printf("recv_cnt: %d (connectReceiver - after)\n", recv_cnt);
+    } else {
+        printf("recv_cnt: %d (connectReceiver - before)\n", recv_cnt);
+        pthread_mutex_lock(&clnt_mutx);
+        recv_socks[recv_cnt++] = recv_sock;
+        pthread_mutex_unlock(&clnt_mutx);
+        printf("recv_cnt: %d (connectReceiver - after)\n", recv_cnt);
+    }
 }
 
 void * sendMsg(void * arg)   // send thread main
