@@ -23,7 +23,7 @@ int readSocketInfo(int sock, SocketInfo* socket_info)
     return str_len;
 }
 
-void* recvStr(int sock, char* msg, int size)
+int recvStr(int sock, char* msg, int size)
 {
 	int str_len, buffer;
     char temp[BUF_SIZE] = {0};
@@ -31,10 +31,12 @@ void* recvStr(int sock, char* msg, int size)
 	str_len = read(sock, msg, size);
 
 	if (str_len == -1) 
-		return (void*) -1;
+		return -1;
 
 	while (str_len < size) {
 		buffer = read(sock, temp, size - str_len);
 		str_len += buffer;
 	}
+
+    return str_len;
 }

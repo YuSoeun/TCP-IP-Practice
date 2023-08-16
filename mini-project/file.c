@@ -6,6 +6,7 @@
 
 #include <sys/stat.h>
 #include "file.h"
+#include "socket.h"
 
 /* return file size*/
 int filesize(const char *filename)
@@ -69,7 +70,7 @@ char** split(char* str, const char* delimiter, int* count) {
     return result;
 }
 
-/* writeSegmentInfo */
+/* write segment info to socket */
 int writeSegmentInfo(int sock, Segment* seg_info)
 {
     int str_len = write(sock, seg_info, sizeof(Segment));
@@ -78,6 +79,7 @@ int writeSegmentInfo(int sock, Segment* seg_info)
     return str_len;
 }
 
+/* read segment info from socket */
 int readSegmentInfo(int sock, Segment* seg_info, char * content, int seg_size)
 {
     int buffer;
@@ -87,10 +89,10 @@ int readSegmentInfo(int sock, Segment* seg_info, char * content, int seg_size)
     while (str_len < sizeof(Segment)) {
         buffer = read(sock, temp, sizeof(Segment) - str_len);
         str_len += buffer;
-        printf("temp: %s\n", temp);
+        // printf("temp: %s\n", temp);
     }
 
-    int content_len = read(sock, content, seg_info->size);
+    int content_len = recvStr(sock, content, seg_info->size);
     content[content_len] = 0;
 
     return str_len;

@@ -12,6 +12,6 @@ typedef struct socketInfo
 
 int writeSocketInfo(int sock, SocketInfo* socket_info);
 int readSocketInfo(int sock, SocketInfo* socket_info);
-void* recvStr(int sock, char* msg, int size);
+int recvStr(int sock, char* msg, int size);
 
 #endif              //__SOCKET_H__
