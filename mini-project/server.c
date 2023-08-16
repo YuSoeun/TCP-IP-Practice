@@ -10,8 +10,9 @@
     4. Sender가 모든 Receiver에게 총 seg 수, 파일 이름 보내기
     5. Receiver가 seg를 받으면 다른 peer에게 전송
        + 동시에 다른 peer에게 seg 받기
-    6. seg 순서대로 조합
-    7. 다 받았으면 알리거나 client 종료
+       + segment 받을 때 malloc all_seg_flag[i] = 1로
+    6. all_seg_flag[0]번부터 보면서 값이 1이면 파일에 적기
+    7. 다 받았으면 client 종료
 */
 
 #include <stdio.h>
@@ -32,18 +33,15 @@
 #include "socket.h"
 
 #define MAX_CLNT 256
-// #define BUF_SIZE 1024
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
 SocketInfo** clnt_info;
 pthread_mutex_t serv_mutx;
 
-void sendRecvSocksInfo();
 void * readClntMsg(void * arg);
 void * handleClnt(void * arg);
-// void sendMsg(int count, char msg[BUF_SIZE], int clnt_sock);
-// void bubbleSort(Result** arr, int count);
+void removeDisconnectedClient(int sock);
 
 int server(int listen_port, int recv_num, char* filename, int seg_size)
 {
@@ -90,8 +88,6 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	for (int i = 0; i < total_seg; i++) {
 		segment[i] = (Segment *)malloc(sizeof(Segment));
 	}
-	// printf("seg_size: %d\n", seg_size);
-	// printf("total_seg: %d\n", total_seg);
 
 	// open file and save in segments
 	total_seg = SaveFile2Seg(filename, segment, seg_size);
@@ -115,7 +111,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	int num = recv_num;
 	clnt_thread = (pthread_t *)malloc(sizeof(pthread_t));
 	for (int i = 0; i < recv_num; i++) {
-		// receiver들끼리 연결 됐는지 확인하는 msg read하는 thread
+		// receiver들끼리 연결 됐는지 확인하는 msg read하는 thread 열기
 		pthread_create(&clnt_thread[i], NULL, readClntMsg, (void*)&clnt_socks[i]);
 
 		// 각 recevier가 connect 요청해야 할 정보 (총 갯수, connect하는 수)
@@ -126,15 +122,12 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 			if (i < j)
 				writeSocketInfo(clnt_socks[i], clnt_info[j]);
 		}
+
 		// 파일 이름, segment 총 수 보내주기
 		int fname_size = (int)strlen(filename) + 1;
-		// printf("fname_size: %d\n", fname_size);
 		write(clnt_socks[i], &fname_size, sizeof(int));
-		// printf("filename: %s\n", filename);
 		write(clnt_socks[i], filename, fname_size);
-		// printf("seg_size: %d\n", seg_size);
 		write(clnt_socks[i], &seg_size, sizeof(int));
-		// printf("total_seg: %d\n", total_seg);
 		write(clnt_socks[i], &total_seg, sizeof(int));
 	}
 
@@ -144,7 +137,6 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	// init complete 다 받았는지 확인
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
-		printf("clnt_thread[%d] return %p\n", i, thread_return);
 
 		// 각 receiver가 받을 segment 수 보내주기
 		if (remain > 0) {
@@ -163,12 +155,15 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		printf("write segment[%d]: %s\n", i, segment[i]->content);
 	}
 
+	for (int i = 0; i < recv_num; i++) {
+		removeDisconnectedClient(clnt_socks[i]);
+	}
 	close(serv_sock);
 
     return 0;
 }
 
-/* handle client to receive and send msg */
+/* read client msg thread */
 void * readClntMsg(void * arg)
 {
 	int clnt_sock = *((int*)arg);
@@ -181,9 +176,9 @@ void * readClntMsg(void * arg)
 	return NULL;
 }
 
+/* remove disconnected client */
 void removeDisconnectedClient(int sock)
 {
-	// remove disconnected client
 	pthread_mutex_lock(&serv_mutx);
 	for (int i = 0; i < clnt_cnt; i++) {
 		if (sock == clnt_socks[i]) {
@@ -196,36 +191,3 @@ void removeDisconnectedClient(int sock)
 	pthread_mutex_unlock(&serv_mutx);
 	close(sock);
 }
-
-// /* send msg to clnt_socket */
-// void sendMsg(int count, char msg[BUF_SIZE], int clnt_sock)
-// {
-// 	int send_len;
-// 	char line[BUF_SIZE];
-
-// 	// send line count and origin msg 
-// 	send_len = write(clnt_sock, &count, sizeof(int));
-// 	send_len = write(clnt_sock, msg, BUF_SIZE);
-
-// 	for (int i = 0; i < count; i++) {
-// 		printf("%s\n", line);
-// 		send_len = write(clnt_sock, line, BUF_SIZE);
-// 	}
-// }
-
-
-/* bubble sort for Result */
-// void bubbleSort(Result** arr, int count)
-// {
-//     Result* temp;
-//     for (int i = 0; i < count; i++) {
-//         for (int j = 0; j < count - i - 1; j++) {
-//             if (arr[j]->cnt < arr[j+1]->cnt) {    // swap
-//                 temp = arr[j];
-//                 arr[j] = arr[j+1];
-//                 arr[j+1] = temp;
-//             }
-//         }
-//     }
-// }
-

@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     if (opt_server >= 5) {
         printf("server - num: %d, filename: %s, seg_size: %d\n", num, filename, seg_size);
         printf("listen port: %d\n",  listen_port);
-        server(listen_port, num, filename, seg_size);
+        server(listen_port, num, filename, seg_size*1000);
     } else if (opt_client >= 3) {
         port = atoi(argv[optind]);
         printf("client - ip: %s, port: %d\n", ip, port);

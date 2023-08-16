@@ -24,42 +24,32 @@ int SaveFile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 {
 	FILE * fp;
 	char * content;
-	int fsize, count = 0;
+	int fsize, i = 0;
 
     content = (char *)malloc(seg_size);
 
 	if ((fp = fopen(filename, "rb")) == NULL) {
 		printf("Failed to open file.\n");
 	} else {
-		// printf("file content is\n");
-		// printf("---------------\n");
-		
-        // TODO: segment_size보다 적게 읽으면 더 읽기
-        // segment 다 읽고 저장
+        // segment_size보다 적게 읽으면 더 읽기
 		while (feof(fp) == 0) {
 			fsize = fread(content, 1, seg_size, fp);
+            while (fsize < seg_size && feof(fp) == 0) {
+                fsize += fread(&content[fsize], 1, seg_size, fp);
+            }
             content[fsize] = 0;
-			// printf("[%d] %s\n", count, content);
 
-            segment[count]->content = (char *)malloc(seg_size);
+            segment[i]->content = (char *)malloc(seg_size);
+            segment[i]->seq = i;
+            memcpy(segment[i]->content, content, seg_size);
+            segment[i]->size = fsize;
 
-            segment[count]->seq = count;
-            memcpy(segment[count]->content, content, seg_size);
-            segment[count]->size = fsize;
-
-            count++;
+            i++;
 		}
 	}
 
-    return count;
+    return i;
 }
-
-// int SaveSeg2File(FILE * fp, Segment* segment, int seg_size)
-// {	
-//     int fwrite_len = fwrite(segment->content, sizeof(char), segment->size, fp);
-
-//     return fwrite_len;
-// }
 
 /* split string with delimiter */
 char** split(char* str, const char* delimiter, int* count) {
@@ -79,6 +69,7 @@ char** split(char* str, const char* delimiter, int* count) {
     return result;
 }
 
+/* writeSegmentInfo */
 int writeSegmentInfo(int sock, Segment* seg_info)
 {
     int str_len = write(sock, seg_info, sizeof(Segment));
@@ -101,7 +92,6 @@ int readSegmentInfo(int sock, Segment* seg_info, char * content, int seg_size)
 
     int content_len = read(sock, content, seg_info->size);
     content[content_len] = 0;
-    // printf("seg[%d]: %s (%d)\n", seg_info->seq, content, seg_info->size);
 
     return str_len;
 }
