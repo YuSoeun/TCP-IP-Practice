@@ -11,7 +11,8 @@ typedef struct segment
 } Segment;
 
 int filesize(const char *filename);
-int Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size);
+int SaveFile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size);
+// int SaveSeg2File(char filename[NAME_LEN], Segment** segment, int seg_size);
 char** split(char* str, const char* delimiter, int* count);
 
 int writeSegmentInfo(int sock, Segment* socket_info);

@@ -90,11 +90,11 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	for (int i = 0; i < total_seg; i++) {
 		segment[i] = (Segment *)malloc(sizeof(Segment));
 	}
-	printf("seg_size: %d\n", seg_size);
-	printf("total_seg: %d\n", total_seg);
+	// printf("seg_size: %d\n", seg_size);
+	// printf("total_seg: %d\n", total_seg);
 
 	// open file and save in segments
-	total_seg = Savefile2Seg(filename, segment, seg_size);
+	total_seg = SaveFile2Seg(filename, segment, seg_size);
 	printf("file end\n");
 
 	// accept receviers
@@ -128,13 +128,13 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		}
 		// 파일 이름, segment 총 수 보내주기
 		int fname_size = (int)strlen(filename) + 1;
-		printf("fname_size: %d\n", fname_size);
+		// printf("fname_size: %d\n", fname_size);
 		write(clnt_socks[i], &fname_size, sizeof(int));
-		printf("filename: %s\n", filename);
+		// printf("filename: %s\n", filename);
 		write(clnt_socks[i], filename, fname_size);
-		printf("seg_size: %d\n", seg_size);
+		// printf("seg_size: %d\n", seg_size);
 		write(clnt_socks[i], &seg_size, sizeof(int));
-		printf("total_seg: %d\n", total_seg);
+		// printf("total_seg: %d\n", total_seg);
 		write(clnt_socks[i], &total_seg, sizeof(int));
 	}
 
@@ -144,10 +144,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	// init complete 다 받았는지 확인
 	for (int i = 0; i < recv_num; i++) {
 		pthread_join(clnt_thread[i], &thread_return);
-		printf("thread[%d] return %p\n", i, thread_return);
+		printf("clnt_thread[%d] return %p\n", i, thread_return);
 
 		// 각 receiver가 받을 segment 수 보내주기
-		
 		if (remain > 0) {
 			int tmp = seg_num + 1;
 			write(clnt_socks[i], &tmp, sizeof(int));
@@ -155,7 +154,6 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		} else {
 			write(clnt_socks[i], &seg_num, sizeof(int));
 		}
-		
 	}
 
 	// segment RR로 나눠서 보내주기

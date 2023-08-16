@@ -20,9 +20,8 @@ int filesize(const char *filename)
 }
 
 /* open file and save in trie structure */
-int Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
+int SaveFile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 {
-	char **split_line;
 	FILE * fp;
 	char * content;
 	int fsize, count = 0;
@@ -32,14 +31,15 @@ int Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 	if ((fp = fopen(filename, "rb")) == NULL) {
 		printf("Failed to open file.\n");
 	} else {
-		printf("file content is\n");
-		printf("---------------\n");
+		// printf("file content is\n");
+		// printf("---------------\n");
 		
+        // TODO: segment_size보다 적게 읽으면 더 읽기
         // segment 다 읽고 저장
 		while (feof(fp) == 0) {
 			fsize = fread(content, 1, seg_size, fp);
             content[fsize] = 0;
-			printf("[%d] %s\n", count, content);
+			// printf("[%d] %s\n", count, content);
 
             segment[count]->content = (char *)malloc(seg_size);
 
@@ -53,6 +53,13 @@ int Savefile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
 
     return count;
 }
+
+// int SaveSeg2File(FILE * fp, Segment* segment, int seg_size)
+// {	
+//     int fwrite_len = fwrite(segment->content, sizeof(char), segment->size, fp);
+
+//     return fwrite_len;
+// }
 
 /* split string with delimiter */
 char** split(char* str, const char* delimiter, int* count) {
