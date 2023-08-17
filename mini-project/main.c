@@ -1,6 +1,6 @@
 /*
     sender: ./p2p -s -n (최대 receving peer) -f (filename) -g (segment 크기 KB) -p (listening port)
-        ex) ./p2p -s -n 2 -f data.txt -g 10 -p 7777
+        ex) ./p2p -s -n 2 -f data.txt -g 1 -p 7777
     receiver: ./p2p -r -a 192.168.10.2 9090 -p (listening port)
         ex) ./p2p -r -p 7778 -a 203.252.112.31 7777
 */
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     if (opt_server >= 5) {
         printf("server - num: %d, filename: %s, seg_size: %d\n", num, filename, seg_size);
         printf("listen port: %d\n",  listen_port);
-        server(listen_port, num, filename, seg_size*1000);
+        server(listen_port, num, filename, seg_size*1024);
     } else if (opt_client >= 3) {
         port = atoi(argv[optind]);
         printf("client - ip: %s, port: %d\n", ip, port);

@@ -91,7 +91,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 
 	// open file and save in segments
 	total_seg = SaveFile2Seg(filename, segment, seg_size);
-	printf("file end\n");
+	printf("read all file\n");
 
 	// accept receviers
 	for (int i = 0; i < recv_num; i++) {
