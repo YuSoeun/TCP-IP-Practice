@@ -37,7 +37,6 @@ int SaveFile2Seg(char filename[NAME_LEN], Segment** segment, int seg_size)
             while (fsize < seg_size && feof(fp) == 0) {
                 fsize += fread(&content[fsize], 1, seg_size, fp);
             }
-            // content[fsize] = 0;
 
             segment[i]->content = (char *)malloc(seg_size);
             segment[i]->seq = i;

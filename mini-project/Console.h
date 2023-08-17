@@ -5,6 +5,7 @@
 #define	__CONSOL__
 
 void clrscr(void);              // clear screen
+void clrline(int y);            // clear line
 void gotoxy(int x, int y);     	// move cursor to (x, y) coordinate
 
 int getWindowWidth();       	// get width of current console window

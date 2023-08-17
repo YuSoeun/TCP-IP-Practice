@@ -12,7 +12,7 @@ typedef struct socketInfo
 
 typedef struct segment
 {
-    int seq;        // segment sequence
+    int seq;            // segment sequence
     char * content;
     int size;
 } Segment;

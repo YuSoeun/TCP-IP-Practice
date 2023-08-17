@@ -84,7 +84,7 @@ void help()
            "  -h                help\n" 
            "  -s                Sending Peer\n" 
            "  -n [NUMBER]       최대 receving peer\n" 
-           "  -f [FILE]         읽을 파일\n"
+           "  -f [FILE]         읽을 파일 (ex. video.mp4, video_long.mp4)\n"
            "  -g [SIZE]         Segment Size(KB\n"
            "  -p [LISTEN_PORT]  listening할 port\n"
            "\n");

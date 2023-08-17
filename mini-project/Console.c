@@ -25,6 +25,17 @@ void clrscr()
 	fflush(stdout);
 }
 
+/* refresh console screen */
+void clrline(int y)
+{
+	int max_width = getWindowWidth();
+
+	for (int x = 0; x < max_width; x++){
+		gotoxy(x, y);
+		printf(" ");
+	}
+}
+
 /* get window width */
 int getWindowWidth()
 {
