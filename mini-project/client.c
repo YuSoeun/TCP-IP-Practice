@@ -86,6 +86,7 @@ int client(int listen_port, char * ip, int port)
 	setsockopt(clnt_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
     // 다른 Receiver accept하는 thread 열기
+    recv_socks = (int *)malloc(sizeof(int) * total_recv);
     pthread_create(&acpt_thread, NULL, acceptReceiver, (void *)&clnt_sock);
     
     // server connect socket init
@@ -104,7 +105,7 @@ int client(int listen_port, char * ip, int port)
 
     // receiver 개수 받기
     read(serv_sock, &total_recv, sizeof(int));
-    recv_socks = (int *)malloc(sizeof(int) * total_recv);
+    recv_socks = realloc(recv_socks, sizeof(int) * total_recv);
     printf("total_recv: %d\n", total_recv);
 
     read(serv_sock, &recv_num, sizeof(int));
@@ -137,58 +138,59 @@ int client(int listen_port, char * ip, int port)
     for (int i = 0; i < recv_num; i++) {
         pthread_join(cnct_thread[i], &thread_return);
     }
+    printf("accept thread join\n");
     pthread_detach(acpt_thread);
 
-    // // 미리 segment, all_seg_flag malloc
-    // all_seg_flag = (int *)malloc(total_seg * sizeof(int));
-    // memset(all_seg_flag, 0, total_seg * sizeof(int));
-    // segment = (Segment **)malloc(total_seg * sizeof(Segment *));
+    // 미리 segment, all_seg_flag malloc
+    all_seg_flag = (int *)malloc(total_seg * sizeof(int));
+    memset(all_seg_flag, 0, total_seg * sizeof(int));
+    segment = (Segment **)malloc(total_seg * sizeof(Segment *));
 
-    // // Sender에게 init complete all_seg_flag 보내기
-    // printf("Init complete\n");
-    // memcpy(msg, "Init complete", BUF_SIZE);
-    // write(serv_sock, msg, BUF_SIZE);
+    // Sender에게 init complete all_seg_flag 보내기
+    printf("Init complete\n");
+    memcpy(msg, "Init complete", BUF_SIZE);
+    write(serv_sock, msg, BUF_SIZE);
     
-    // // sender로부터 receive해야할 개수 읽기
-    // read(serv_sock, &seg2RecvNum, sizeof(int));
-    // printf("sender로부터 receive해야할 개수: %d\n", seg2RecvNum);
+    // sender로부터 receive해야할 개수 읽기
+    read(serv_sock, &seg2RecvNum, sizeof(int));
+    printf("sender로부터 receive해야할 개수: %d\n", seg2RecvNum);
     
-    // // 다른 Receiver segment read하고 write하는 thread 열어놓기
-    // remain_seg_num = total_seg - seg2RecvNum;
-    // snd_thread = (pthread_t *)malloc(recv_cnt * sizeof(pthread_t));
-    // recv_seg_num = malloc(seg2RecvNum * sizeof(int));
-    // memset(recv_seg_num, -1, seg2RecvNum * sizeof(int));
-    // for (int i = 0; i < recv_cnt; i++) {
-    //     pthread_create(&rcv_thread, NULL, recvSegFromPeer, (void *)&recv_socks[i]);
-    //     pthread_create(&snd_thread[i], NULL, sendSeg2Peers, (void *)&recv_socks[i]);
-    // }
+    // 다른 Receiver segment read하고 write하는 thread 열어놓기
+    remain_seg_num = total_seg - seg2RecvNum;
+    snd_thread = (pthread_t *)malloc(recv_cnt * sizeof(pthread_t));
+    recv_seg_num = malloc(seg2RecvNum * sizeof(int));
+    memset(recv_seg_num, -1, seg2RecvNum * sizeof(int));
+    for (int i = 0; i < recv_cnt; i++) {
+        pthread_create(&rcv_thread, NULL, recvSegFromPeer, (void *)&recv_socks[i]);
+        pthread_create(&snd_thread[i], NULL, sendSeg2Peers, (void *)&recv_socks[i]);
+    }
 
-    // // consumer thread 만들기
-    // // pthread_create(&write_file_thread, NULL, writeSeg2File, (void *)filename);
+    // consumer thread 만들기
+    // pthread_create(&write_file_thread, NULL, writeSeg2File, (void *)filename);
 
-    // // Sender로부터 segmaent 받아오기
-    // getSegmentFromSock(serv_sock, seg2RecvNum);
-    // printf("\nSender로 부터 모든 socket을 받았습니다.\n");
+    // Sender로부터 segmaent 받아오기
+    getSegmentFromSock(serv_sock, seg2RecvNum);
+    printf("\nSender로 부터 모든 socket을 받았습니다.\n");
 
-    // // 다른 recv에게 seg 다 보냈는지 출력
-    // for (int i = 0; i < recv_cnt; i++) {
-    //     pthread_join(snd_thread[i], &thread_return);
-    //     printf("\n%d번째 receiver에게 모든 segment을 보냈습니다.\n", i);
-    // }
+    // 다른 recv에게 seg 다 보냈는지 출력
+    for (int i = 0; i < recv_cnt; i++) {
+        pthread_join(snd_thread[i], &thread_return);
+        printf("\n%d번째 receiver에게 모든 segment을 보냈습니다.\n", i);
+    }
 
-    // // pthread_join(write_file_thread, &thread_return);
-    // // printf("\n파일에 받아온 정보를 다 적었습니다.\n");
+    // pthread_join(write_file_thread, &thread_return);
+    // printf("\n파일에 받아온 정보를 다 적었습니다.\n");
 
-    // pthread_join(rcv_thread, &thread_return);
-    // // pthread_detach(rcv_thread);
-    // printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
+    pthread_join(rcv_thread, &thread_return);
+    // pthread_detach(rcv_thread);
+    printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
 
-    // // free segment
-    // for (int i = 0; i < total_seg; i++) {
-    //     free(segment[i]->content);
-    //     free(segment[i]);
-    // }
-    // free(segment);
+    // free segment
+    for (int i = 0; i < total_seg; i++) {
+        free(segment[i]->content);
+        free(segment[i]);
+    }
+    free(segment);
     
     // TODO: Receiver 진행상황 console 출력
     
@@ -203,16 +205,16 @@ void * acceptReceiver(void * arg)
     int * clnt_sock = (int *)arg;
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_adr;
+    recv_adr_sz = sizeof(recv_adr);
 
     while (recv_cnt < total_recv-1) {
-        recv_adr_sz = sizeof(recv_adr);
         if ((recv_sock = accept(*clnt_sock, (struct sockaddr *)&recv_adr, &recv_adr_sz)) == -1) {
             perror("accept error");
         } else {
             pthread_mutex_lock(&clnt_mutx);
             recv_socks[recv_cnt++] = recv_sock;
+            printf("accept receiver: %d(recv_cnt: %d)\n", *clnt_sock, recv_cnt);
             pthread_mutex_unlock(&clnt_mutx);
-            printf("accept receiver: %d\n", *clnt_sock);
         }
     }
 }
@@ -239,8 +241,8 @@ void * connectReceiver(void * arg)
     } else {
         pthread_mutex_lock(&clnt_mutx);
         recv_socks[recv_cnt++] = recv_sock;
+        printf("connect to ip:%s, port:%d(recv_cnt: %d)\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port), recv_cnt);
         pthread_mutex_unlock(&clnt_mutx);
-        printf("connect to ip:%s, port:%d\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port));
     }
 }
 
