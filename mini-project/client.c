@@ -187,9 +187,15 @@ int client(int listen_port, char * ip, int port)
 
     pthread_join(write_file_thread, &thread_return);
     printf("\n파일에 받아온 정보를 다 적었습니다.\n");
+    
 
-    pthread_detach(rcv_thread);
+    // DELETE: for file test
+    pthread_join(rcv_thread, &thread_return);
+
+    // pthread_detach(rcv_thread);
     printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
+
+    // TODO: g가 3이상일 때 stack smash error
 
     // free segment
     for (int i = 0; i < total_seg; i++) {
@@ -238,7 +244,6 @@ void * connectReceiver(void * arg)
     
     memset(&recv_addr, 0, sizeof(recv_addr));
     recv_addr.sin_family = AF_INET;
-    // inet_aton(recv_info->ip, &recv_addr.sin_addr);
     recv_addr.sin_addr.s_addr = inet_addr(recv_info->ip);
     recv_addr.sin_port = htons(recv_info->listen_port);
 
@@ -268,7 +273,7 @@ void * getSegmentFromSock(int serv_sock, int seg2RecvNum)
         seq = tmp_seg->seq;
 
         segment[seq]->seq = tmp_seg->seq;
-        memcpy(segment[seq]->content, content, tmp_seg->size);
+        memcpy(segment[seq]->content, content, seg_size);
         segment[seq]->size = tmp_seg->size;
         printf("[Sender] - seg[%d] %d B\n", segment[seq]->seq, segment[seq]->size);
         
