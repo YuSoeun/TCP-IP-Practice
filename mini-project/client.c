@@ -188,8 +188,7 @@ int client(int listen_port, char * ip, int port)
     pthread_join(write_file_thread, &thread_return);
     printf("\n파일에 받아온 정보를 다 적었습니다.\n");
 
-    pthread_join(rcv_thread, &thread_return);
-    // pthread_detach(rcv_thread);
+    pthread_detach(rcv_thread);
     printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
 
     // free segment
