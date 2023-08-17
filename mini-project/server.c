@@ -152,7 +152,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	for (int i = 0; i < total_seg; i++) {
 		int clnt_index = i%recv_num;
 		writeSegmentInfo(clnt_socks[clnt_index], segment[i]);
-		printf("write segment[%d]: %s\n", i, segment[i]->content);
+		printf("write to %d seg[%d] %d B\n", clnt_index, i, segment[i]->size);
 	}
 
 	for (int i = 0; i < recv_num; i++) {

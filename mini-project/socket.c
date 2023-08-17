@@ -40,3 +40,30 @@ int recvStr(int sock, char* msg, int size)
 
     return str_len;
 }
+
+/* write segment info to socket */
+int writeSegmentInfo(int sock, Segment* seg_info)
+{
+    int str_len = write(sock, seg_info, sizeof(Segment));
+    str_len += write(sock, seg_info->content, seg_info->size);
+
+    return str_len;
+}
+
+/* read segment info from socket */
+int readSegmentInfo(int sock, Segment* seg_info, char * content, int seg_size)
+{
+    int buffer;
+    char temp[seg_size];
+
+    int str_len = read(sock, seg_info, sizeof(Segment));
+    while (str_len < sizeof(Segment)) {
+        buffer = read(sock, temp, sizeof(Segment) - str_len);
+        str_len += buffer;
+    }
+
+    int content_len = recvStr(sock, content, seg_info->size);
+    content[content_len] = 0;
+
+    return str_len + content_len;
+}

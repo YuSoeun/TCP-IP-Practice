@@ -10,7 +10,7 @@
     4. Sender가 모든 Receiver에게 총 seg 수, 파일 이름 보내기
     5. Receiver가 seg를 받으면 다른 peer에게 전송
        + 동시에 다른 peer에게 seg 받기
-       + segment 받을 때 malloc all_seg_flag[i] = 1로
+       + segment 받을 때 all_seg_flag[i] = 1로
     6. all_seg_flag[0]번부터 보면서 값이 1이면 파일에 적기
     7. 다 받았으면 client 종료
 */
@@ -105,7 +105,9 @@ int client(int listen_port, char * ip, int port)
 
     // receiver 개수 받기
     read(serv_sock, &total_recv, sizeof(int));
+    pthread_mutex_lock(&clnt_mutx);
     recv_socks = realloc(recv_socks, sizeof(int) * total_recv);
+    pthread_mutex_unlock(&clnt_mutx);
     printf("total_recv: %d\n", total_recv);
 
     read(serv_sock, &recv_num, sizeof(int));
@@ -129,6 +131,7 @@ int client(int listen_port, char * ip, int port)
     filename = malloc(fname_size);
     recvStr(serv_sock, filename, fname_size);
     read(serv_sock, &seg_size, sizeof(int));
+    printf("segment size: %d\n", seg_size);
     read(serv_sock, &total_seg, sizeof(int));
     printf("전체 segment 개수: %d\n", total_seg);
 
@@ -145,6 +148,10 @@ int client(int listen_port, char * ip, int port)
     all_seg_flag = (int *)malloc(total_seg * sizeof(int));
     memset(all_seg_flag, 0, total_seg * sizeof(int));
     segment = (Segment **)malloc(total_seg * sizeof(Segment *));
+    for (int i = 0; i < total_seg; i++) {
+        segment[i] = (Segment *)malloc(sizeof(Segment));
+        segment[i]->content = (char *)malloc(seg_size * sizeof(char));
+    }
 
     // Sender에게 init complete all_seg_flag 보내기
     printf("Init complete\n");
@@ -153,7 +160,7 @@ int client(int listen_port, char * ip, int port)
     
     // sender로부터 receive해야할 개수 읽기
     read(serv_sock, &seg2RecvNum, sizeof(int));
-    printf("sender로부터 receive해야할 개수: %d\n", seg2RecvNum);
+    printf("sender로부터 receive해야할 개수: %d\n\n", seg2RecvNum);
     
     // 다른 Receiver segment read하고 write하는 thread 열어놓기
     remain_seg_num = total_seg - seg2RecvNum;
@@ -166,7 +173,7 @@ int client(int listen_port, char * ip, int port)
     }
 
     // consumer thread 만들기
-    // pthread_create(&write_file_thread, NULL, writeSeg2File, (void *)filename);
+    pthread_create(&write_file_thread, NULL, writeSeg2File, (void *)filename);
 
     // Sender로부터 segmaent 받아오기
     getSegmentFromSock(serv_sock, seg2RecvNum);
@@ -178,8 +185,8 @@ int client(int listen_port, char * ip, int port)
         printf("\n%d번째 receiver에게 모든 segment을 보냈습니다.\n", i);
     }
 
-    // pthread_join(write_file_thread, &thread_return);
-    // printf("\n파일에 받아온 정보를 다 적었습니다.\n");
+    pthread_join(write_file_thread, &thread_return);
+    printf("\n파일에 받아온 정보를 다 적었습니다.\n");
 
     pthread_join(rcv_thread, &thread_return);
     // pthread_detach(rcv_thread);
@@ -261,14 +268,10 @@ void * getSegmentFromSock(int serv_sock, int seg2RecvNum)
         readSegmentInfo(serv_sock, tmp_seg, content, seg_size);
         seq = tmp_seg->seq;
 
-        // 필요할 때만 segment malloc
-        segment[seq] = (Segment *)malloc(sizeof(Segment));
-        segment[seq]->content = (char *)malloc(seg_size);
-
         segment[seq]->seq = tmp_seg->seq;
         memcpy(segment[seq]->content, content, tmp_seg->size);
         segment[seq]->size = tmp_seg->size;
-        printf("[Sender] - seg[%d]: %s (%d)\n", segment[seq]->seq, segment[seq]->content, segment[seq]->size);
+        printf("[Sender] - seg[%d] %d B\n", segment[seq]->seq, segment[seq]->size);
         
         all_seg_flag[seq] = 1;
         recv_seg_num[i] = seq;
@@ -311,14 +314,10 @@ void * recvSegFromPeer(void * arg)
         readSegmentInfo(sock, tmp_seg, content, seg_size);
         seq = tmp_seg->seq;
 
-        // 필요할 때만 segment malloc
-        segment[seq] = (Segment *)malloc(sizeof(Segment));
-        segment[seq]->content = (char *)malloc(seg_size);
-
         segment[seq]->seq = tmp_seg->seq;
         memcpy(segment[seq]->content, content, seg_size);
         segment[seq]->size = tmp_seg->size;
-        printf("[Receiver] - seg[%d]: %s (%d)\n", seq, segment[seq]->content, segment[seq]->size);
+        printf("[Receiver] - seg[%d] %d B\n", seq, segment[seq]->size);
         
         all_seg_flag[seq] = 1;
         i++;
@@ -346,7 +345,7 @@ void * writeSeg2File(void * arg)
         while (i < total_seg) {
             if (all_seg_flag[i] == 1) {
                 int fwrite_len = fwrite(segment[i]->content, sizeof(char), segment[i]->size, fp);
-                printf("[File Save] - seg[%d]: %s\n", i, segment[i]->content);
+                printf("[File Save] - seg[%d] %d B\n", i, segment[i]->size);
 
                 i++;
             }
