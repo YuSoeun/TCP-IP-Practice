@@ -1,6 +1,6 @@
 /*
     sender: ./p2p -s -n (최대 receving peer) -f (filename) -g (segment 크기 KB) -p (listening port)
-        ex) ./p2p -s -n 2 -f data.txt -g 1 -p 7777
+        ex) ./p2p -s -n 2 -f video_long.mp4 -g 1 -p 7777
     receiver: ./p2p -r -a 192.168.10.2 9090 -p (listening port)
         ex) ./p2p -r -p 4000 -a 203.252.112.31 7777
 
