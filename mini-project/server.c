@@ -110,7 +110,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 			recv_total_seg++;
 
 		recv_info[i] = (RecvInfo *)malloc(sizeof(RecvInfo));
-		setRecvInfo(recv_info[i], recv_total_seg, 0, 0.0);
+		setRecvInfo(recv_info[i], recv_total_seg, 0, 0, 0.0);
 	}
 
 	// accept receviers
@@ -229,7 +229,7 @@ void * printSendProgress()
 	EnableCursor(0);
 
     while(1) {
-		getSendInfo(send_info, &file_size, &total_seg, &cur_size, &sec);
+		getSendInfo(send_info, &file_size, &cur_size, &sec);
 		snd_percent = (double)cur_size / (double)file_size;
 		if (sec > 0)
 			size_per_sec = (double)cur_size / sec;
@@ -260,10 +260,9 @@ void * printSendProgress()
 		}
         
 		gotoxy(0, clnt_cnt+2);
-		printf("                                                                              ");
-		printf("                                                                              ");
-		// DrawLine(0, clnt_cnt+3, getWindowWidth() - 1, clnt_cnt+3, ' ');
+
 		if (cur_size >= file_size) {
+			gotoxy(0, clnt_cnt+3);
 			printf("seg_num: %d, total_seg: %d\n", seg_num, total_seg);
             break;
         }
