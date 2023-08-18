@@ -31,17 +31,20 @@
 #include "file.h"
 #include "client_server.h"
 #include "socket.h"
+#include "progress.h"
 
 #define MAX_CLNT 256
 
 int clnt_cnt = 0;
 int clnt_socks[MAX_CLNT];
-SocketInfo** clnt_info;
+SocketInfo** recv_info;
 pthread_mutex_t serv_mutx;
+SendInfo * send_info;
 
 void * readClntMsg(void * arg);
 void * handleClnt(void * arg);
 void removeDisconnectedClient(int sock);
+void * printSendProgress();
 
 int server(int listen_port, int recv_num, char* filename, int seg_size)
 {
@@ -49,16 +52,16 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	int clnt_adr_sz;
 	struct sockaddr_in serv_adr, clnt_adr;
 	
-	pthread_t t_id;
+	pthread_t console_thread;
 	pthread_t *clnt_thread;
 	void * thread_return;
 	Segment ** segment;
 
 	int total_seg = 0;
 
-	clnt_info = (SocketInfo **)malloc(sizeof(SocketInfo*) * recv_num);
+	recv_info = (SocketInfo **)malloc(sizeof(SocketInfo*) * recv_num);
 	for (int i = 0; i < recv_num; i++) {
-		clnt_info[i] = (SocketInfo *)malloc(sizeof(SocketInfo));
+		recv_info[i] = (SocketInfo *)malloc(sizeof(SocketInfo));
 	}
 	
 	// multi thead init and set socket
@@ -82,8 +85,8 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal));
 
 	// (file size 총 수 / seg_size)해서 총 segment 갯수 구하기
-	total_seg = filesize(filename);
-	total_seg = total_seg/seg_size + 1;
+	int file_size = filesize(filename);
+	total_seg = file_size/seg_size + 1;
 	segment = (Segment **)malloc(sizeof(Segment *) * total_seg);
 	for (int i = 0; i < total_seg; i++) {
 		segment[i] = (Segment *)malloc(sizeof(Segment));
@@ -92,6 +95,8 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	// open file and save in segments
 	total_seg = SaveFile2Seg(filename, segment, seg_size);
 	printf("read all file\n");
+	send_info = (SendInfo *)malloc(sizeof(SendInfo));
+	setSendInfo(send_info, file_size, total_seg, seg_size,  0, 0);
 
 	// accept receviers
 	for (int i = 0; i < recv_num; i++) {
@@ -102,11 +107,13 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		clnt_socks[clnt_cnt++] = clnt_sock;
 		pthread_mutex_unlock(&serv_mutx);
 	
-		clnt_info[i]->id = i;
-		memcpy(clnt_info[i]->ip, inet_ntoa(clnt_adr.sin_addr), BUF_SIZE);
-		read(clnt_sock, &clnt_info[i]->listen_port, sizeof(int));
-		printf("Connected client IP: %s, port: %d\n", clnt_info[i]->ip, clnt_info[i]->listen_port);
+		recv_info[i]->id = i;
+		memcpy(recv_info[i]->ip, inet_ntoa(clnt_adr.sin_addr), BUF_SIZE);
+		read(clnt_sock, &recv_info[i]->listen_port, sizeof(int));
+		printf("Connected client IP: %s, port: %d\n", recv_info[i]->ip, recv_info[i]->listen_port);
 	}
+
+	pthread_create(&console_thread, NULL, printSendProgress, (void *)&total_seg);
 	
 	int num = recv_num;
 	clnt_thread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -120,7 +127,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		write(clnt_socks[i], &num, sizeof(int));
 		for (int j = 0; j < recv_num ; j++) {
 			if (i < j)
-				writeSocketInfo(clnt_socks[i], clnt_info[j]);
+				writeSocketInfo(clnt_socks[i], recv_info[j]);
 		}
 
 		// 파일 이름, segment 총 수 보내주기
@@ -149,11 +156,21 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	}
 
 	// segment RR로 나눠서 보내주기
+	clock_t start, end;
+	double send_time;
+	
 	for (int i = 0; i < total_seg; i++) {
+		start = clock();
 		int clnt_index = i%recv_num;
 		writeSegmentInfo(clnt_socks[clnt_index], segment[i]);
-		printf("write to %d seg[%d] %d B\n", clnt_index, i, segment[i]->size);
+		end = clock();
+
+		send_time = (double)(end - start) / CLOCKS_PER_SEC;
+		updateSendInfo(send_info, i+1, send_time);
+		sleep(0.1);
+		// printf("write to %d seg[%d] %fs\n", clnt_index, send_info->snd_seg_num, send_info->time_spent);
 	}
+	pthread_join(console_thread, &thread_return);
 
 	for (int i = 0; i < recv_num; i++) {
 		removeDisconnectedClient(clnt_socks[i]);
@@ -171,7 +188,7 @@ void * readClntMsg(void * arg)
 	char msg[BUF_SIZE] = {};
 	
 	recvStr(clnt_sock, msg, BUF_SIZE);
-	printf("\nreceived msg[%d]: %s\n", clnt_sock, msg);
+	// printf("\nreceived msg[%d]: %s\n", clnt_sock, msg);
 
 	return NULL;
 }
@@ -190,4 +207,41 @@ void removeDisconnectedClient(int sock)
 	clnt_cnt--;
 	pthread_mutex_unlock(&serv_mutx);
 	close(sock);
+}
+
+void * printSendProgress()
+{
+    clock_t start, end;
+    int file_size, total_seg, seg_size, seg_num, snd_size;
+	double sec, size_per_sec = 0, snd_percent = 0;
+
+    start = clock();
+	clrscr();
+	EnableCursor(0);
+
+    while(1) {
+        // sleep(0.1);
+		getSendInfo(send_info, &file_size, &total_seg, &seg_size, &seg_num, &sec);
+        snd_size = (double)seg_num * (double)seg_size;
+		if (seg_size > 0)
+			snd_percent = 100.0 * (double)seg_num / (double)total_seg;
+		if (sec > 0)
+			size_per_sec = (double)snd_size / sec;
+
+		// clrscr();
+		gotoxy(0, 0);
+		// TODO: # 갯수 유동적이게 조절하도록
+        printf("Sending Peer [###############] %3.2lf%% (%d/%dBytes) %.2lfMbps (%.2lfs)\n",
+				snd_percent, snd_size, file_size, size_per_sec, sec);
+
+        if (seg_num == total_seg) {
+			printf("seg_num: %d, total_seg: %d\n", seg_num, total_seg);
+            break;
+        }
+    }
+
+    end = clock();
+   	int total_time = (double)(end - start) / CLOCKS_PER_SEC;
+
+    return NULL;
 }

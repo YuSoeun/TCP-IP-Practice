@@ -1,7 +1,7 @@
 # all: server.out client.out
 
-p2p: server.o client.o Console.o file.o socket.o main.c
-	gcc -o p2p server.o client.o Console.o main.c file.o socket.o
+p2p: server.o client.o Console.o file.o socket.o progress.o main.c
+	gcc -o p2p server.o client.o Console.o main.c file.o socket.o progress.o
 
 server.o: server.c
 	gcc -c -o server.o server.c
@@ -17,6 +17,9 @@ file.o: file.c file.h
 
 socket.o: socket.c socket.h
 	gcc -c -o socket.o socket.c
+
+progress.o: progress.c progress.h
+	gcc -c -o progress.o progress.c
 
 clean:
 	rm *.out *.o p2p

@@ -51,7 +51,7 @@ int * all_seg_flag;              // 전체 segment 써졌는지 표시하는 fla
 int * recv_seg_num;              // sender에게 받은 segment seq 표시
 int * progress;
 int sender_seg_cnt;
-void * printSendProgress();
+// void * printSendProgress();
 
 int client(int listen_port, char * ip, int port)
 {
@@ -124,7 +124,7 @@ int client(int listen_port, char * ip, int port)
     pthread_t prgs_thread;
     progress = (int *)malloc(sizeof(recv_num) * recv_num);
     memset(progress, 0, sizeof(recv_num));
-    pthread_create(prgs_thread, printSendProgress, void(*));
+    // pthread_create(prgs_thread, printSendProgress, void(*));
     
     // Sender에서 receiver_sock 정보 받고 다른 Receiver connect
     for (int i = 0; i < recv_num; i++) {
@@ -362,27 +362,27 @@ void * writeSeg2File(void * arg)
     return NULL;
 }
 
-void * printSendProgress()
-{
-    clock_t start, end;
-    float send_data;
+// void * printSendProgress()
+// {
+//     clock_t start, end;
+//     float send_data;
 
-    start = clock();
+//     start = clock();
 
-    while(1) {
-        sleep(1);
-        send_data = (float)sender_seg_cnt * (float)seg_size / (float)total_seg;
+//     while(1) {
+//         sleep(1);
+//         send_data = (float)sender_seg_cnt * (float)seg_size / (float)total_seg;
 
-        rewind(stdout);
-        printf("Sending Peer [#########################] 40% (%d/%dBytes) %ldMbps (%lds)\n", , send_data, (long)start/CLOCKS_PER_SEC);
+//         rewind(stdout);
+//         printf("Sending Peer [#########################] 40% (%d/%dBytes) %ldMbps (%lds)\n", , send_data, (long)start/CLOCKS_PER_SEC);
 
-        // if () {
-        //     break;
-        // }
-    }
+//         // if () {
+//         //     break;
+//         // }
+//     }
 
-    end = clock();
-    int total_time = (double)(end - start) / CLOCKS_PER_SEC;
+//     end = clock();
+//     int total_time = (double)(end - start) / CLOCKS_PER_SEC;
 
-    return NULL;
-}
+//     return NULL;
+// }

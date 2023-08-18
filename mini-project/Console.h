@@ -25,4 +25,3 @@ int kbhit();
 int getch();
 
 #endif	//	__CONSOL__
-
