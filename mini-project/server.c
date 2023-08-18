@@ -167,7 +167,7 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 
 		send_time = (double)(end - start) / CLOCKS_PER_SEC;
 		updateSendInfo(send_info, i+1, send_time);
-		sleep(0.1);
+		sleep(0.5);
 		// printf("write to %d seg[%d] %fs\n", clnt_index, send_info->snd_seg_num, send_info->time_spent);
 	}
 	pthread_join(console_thread, &thread_return);
@@ -214,34 +214,46 @@ void * printSendProgress()
     clock_t start, end;
     int file_size, total_seg, seg_size, seg_num, snd_size;
 	double sec, size_per_sec = 0, snd_percent = 0;
+	char tmp[BUF_SIZE];
 
     start = clock();
 	clrscr();
 	EnableCursor(0);
 
     while(1) {
-        // sleep(0.1);
 		getSendInfo(send_info, &file_size, &total_seg, &seg_size, &seg_num, &sec);
         snd_size = (double)seg_num * (double)seg_size;
 		if (seg_size > 0)
-			snd_percent = 100.0 * (double)seg_num / (double)total_seg;
+			snd_percent = (double)seg_num / (double)total_seg;
 		if (sec > 0)
 			size_per_sec = (double)snd_size / sec;
 
-		// clrscr();
 		gotoxy(0, 0);
 		// TODO: # 갯수 유동적이게 조절하도록
-        printf("Sending Peer [###############] %3.2lf%% (%d/%dBytes) %.2lfMbps (%.2lfs)\n",
-				snd_percent, snd_size, file_size, size_per_sec, sec);
+        printf("Sending Peer [");
+
+		sprintf(tmp, "%d", snd_size);
+		int bar_width = getWindowWidth() - (strlen("Sending Peer [] %% (/) Mbps (s)     \n")
+				+ 5 + strlen(tmp) * 3 + 11);
+		int num = bar_width * snd_percent;
+		for (int i = 0; i < bar_width; i++) {
+			if (i < num)	printf("#");
+			else			printf(" ");
+		}
+		
+		printf("] %3.2lf%% (%d/%dBytes) %.2lfMbps (%.2lfs)     \n",
+				100.0 * snd_percent, snd_size, file_size, size_per_sec, sec);
 
         if (seg_num == total_seg) {
 			printf("seg_num: %d, total_seg: %d\n", seg_num, total_seg);
             break;
         }
+		printf("     \n");
     }
 
-    end = clock();
    	int total_time = (double)(end - start) / CLOCKS_PER_SEC;
+	EnableCursor(1);
+
 
     return NULL;
 }
