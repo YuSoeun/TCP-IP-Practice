@@ -12,7 +12,7 @@ void setSendInfo(SendInfo * info, int file_size, int size, float time)
 void updateSendInfo(SendInfo * info, int size, double time)
 {
     info->cur_size += size;
-    info->time_spent += time;
+    info->time_spent = time;
 }
 
 void getSendInfo(SendInfo * info, int* file_size, int* size, double* time)
@@ -34,7 +34,7 @@ void updateRecvInfo(RecvInfo * info, int size, double time)
 {
     info->seg_num++;
     info->cur_size += size;
-    info->time_spent += time;
+    info->time_spent = time;
 }
 
 void getRecvInfo(RecvInfo * info, int* total_seg, int* seg_num, int* size, double* time)

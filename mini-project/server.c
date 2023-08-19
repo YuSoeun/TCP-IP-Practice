@@ -168,8 +168,8 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	clock_t start, end;
 	double send_time;
 	
+	start = clock();
 	for (int i = 0; i < total_seg; i++) {
-		start = clock();
 		int clnt_index = i%recv_num;
 		writeSegmentInfo(clnt_socks[clnt_index], segment[i]);
 		end = clock();
@@ -239,13 +239,13 @@ void * printSendProgress()
 
 		// print sender progress bar
 		sprintf(tmp, "%d", cur_size);
-		bar_width = getWindowWidth() - (strlen("Sending Peer [] %% (/) Mbps (s)     \n")
+		bar_width = getWindowWidth() - (strlen("Sending Peer [] %% ( /  )  Mbps (s)     \n")
 				+ 5 + strlen(tmp) * 3 + 11);
 
 		gotoxy(0, 0);
         printf("Sending Peer [");
 		printBar(bar_width, snd_percent);
-		printf("] %3.2lf%% (%d/%dBytes) %.2lfMbps (%.2lfs)     \n",
+		printf("] %3.2lf%% (%d / %d Bytes) %.2lf Mbps (%.2lfs)     \n",
 				100.0 * snd_percent, cur_size, file_size, size_per_sec, sec);
 
 		// print receiver progress bar
@@ -266,13 +266,11 @@ void * printSendProgress()
 
 		if (cur_size >= file_size) {
 			gotoxy(0, clnt_cnt+3);
-			printf("seg_num: %d, total_seg: %d\n", seg_num, total_seg);
+			printf("cur_size: %d, file_size: %d\n", cur_size, file_size);
             break;
         }
     }
-
 	EnableCursor(1);
-
 
     return NULL;
 }

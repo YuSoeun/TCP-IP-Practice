@@ -36,6 +36,7 @@ void * sendSeg2Peers(void* arg);
 void * getSegmentFromSock(int serv_sock, int seg2recv_num);
 void * recvSegFromPeer(void * arg);
 void * writeSeg2File(void * arg);
+void * printRecvProgress();
 
 int recv_cnt = 0;
 int recv_num;                   // connect를 요청해야할 thread 수
@@ -62,7 +63,7 @@ int client(int listen_port, char * ip, int port)
     int serv_sock, clnt_sock;
     int recv_sock, recv_adr_sz;
 	struct sockaddr_in serv_addr, clnt_adr, recv_addr;
-	pthread_t acpt_thread, rcv_thread, write_file_thread;
+	pthread_t acpt_thread, rcv_thread, write_file_thread, console_thread;
 	pthread_t * cnct_thread, * snd_thread;
 	void * thread_return;
     
@@ -195,9 +196,10 @@ int client(int listen_port, char * ip, int port)
         pthread_create(&snd_thread[i], NULL, sendSeg2Peers, (void *)&recv_socks[i]);
     }
 
-    // consumer thread 만들기
+    // console print, consumer thread 만들기
+	pthread_create(&console_thread, NULL, printRecvProgress, (void *)&total_seg);
     pthread_create(&write_file_thread, NULL, writeSeg2File, (void *)filename);
-
+    
     // Sender로부터 segmaent 받아오기
     getSegmentFromSock(serv_sock, seg2recv_num);
     // printf("\nSender로 부터 모든 socket을 받았습니다.\n");
@@ -210,6 +212,8 @@ int client(int listen_port, char * ip, int port)
 
     pthread_join(write_file_thread, &thread_return);
     // printf("\n파일에 받아온 정보를 다 적었습니다.\n");
+
+    pthread_join(console_thread, &thread_return);
 
     pthread_detach(rcv_thread);
     // printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
@@ -278,14 +282,19 @@ void * connectReceiver(void * arg)
 /* get segment from sock and save to segment */
 void * getSegmentFromSock(int serv_sock, int seg2recv_num)
 {
-    int seq = 0;
-    Segment * tmp_seg = (Segment *)malloc(sizeof(Segment));
-    tmp_seg->content = (char *)malloc(seg_size);
-    char * content = (char *)(malloc(seg_size));
+    int send_time, seq = 0;
+    char * content;
+    Segment * tmp_seg;
     pthread_t * send_seg_thread;
+    clock_t start, end;
+
     sender_seg_cnt = 0;
+    tmp_seg = (Segment *)malloc(sizeof(Segment));
+    tmp_seg->content = (char *)malloc(seg_size);
+    content = (char *)(malloc(seg_size));
 
     // seg server로부터 받기
+    start = clock();
     while (sender_seg_cnt < seg2recv_num) {
         readSegmentInfo(serv_sock, tmp_seg, content, seg_size);
         seq = tmp_seg->seq;
@@ -295,6 +304,10 @@ void * getSegmentFromSock(int serv_sock, int seg2recv_num)
         segment[seq]->size = tmp_seg->size;
         // printf("[Sender] - seg[%d] %d B\n", segment[seq]->seq, segment[seq]->size);
         
+		end = clock();
+		send_time = (double)(end - start) / CLOCKS_PER_SEC;
+        updateSendInfo(snd_info, segment[seq]->size, send_time);
+
         all_seg_flag[seq] = 1;
         recv_seg_num[sender_seg_cnt] = seq;
         sender_seg_cnt++;
@@ -378,21 +391,58 @@ void * writeSeg2File(void * arg)
     return NULL;
 }
 
-// void * printSendProgress()
-// {
-//     clock_t start, end;
-//     float send_data;
-//     start = clock();
-//     while(1) {
-//         sleep(1);
-//         send_data = (float)sender_seg_cnt * (float)seg_size / (float)total_seg;
-//         rewind(stdout);
-//         printf("Sending Peer [#########################] 40% (%d/%dBytes) %ldMbps (%lds)\n", , send_data, (long)start/CLOCKS_PER_SEC);
-//         // if () {
-//         //     break;
-//         // }
-//     }
-//     end = clock();
-//     int total_time = (double)(end - start) / CLOCKS_PER_SEC;
-//     return NULL;
-// }
+void * printRecvProgress()
+{
+    clock_t start, end;
+	int bar_width;
+    int file_size, total_seg, seg_num, cur_size, size_per_recv;
+	double sec, size_per_sec = 0, snd_percent = 0;
+	char tmp[BUF_SIZE];
+
+    start = clock();
+	// clrscr();
+	// EnableCursor(0);
+
+    while(1) {
+		getSendInfo(snd_info, &file_size, &cur_size, &sec);
+		snd_percent = (double)cur_size / (double)file_size;
+		if (sec > 0)
+			size_per_sec = (double)cur_size / sec;
+
+		// print sender progress bar
+        // TODO: receiving peer id 추가
+		sprintf(tmp, "%d", cur_size);
+		bar_width = getWindowWidth() - (strlen("Receiving Peer [] %% ( /  Bytes)  Mbps (s)     \n")
+				+ 5 + strlen(tmp) * 3 + 11);
+		// gotoxy(0, 0);
+        printf("Receiving Peer [");
+		printBar(bar_width, snd_percent);
+		printf("] %3.2lf%% (%d / %d Bytes) %.2lf Mbps (%.2lfs)     \n",
+				100.0 * snd_percent, cur_size, file_size, size_per_sec, sec);
+
+		// // print receiver progress bar
+		// for (int i = 0; i < recv_cnt; i++) {
+		// 	getRecvInfo(recv_info[i], &total_seg, &seg_num, &size_per_recv, &sec);
+		// 	snd_percent = (double)seg_num / (double)total_seg;
+		// 	sprintf(tmp, "%d", total_seg);
+		// 	bar_width = getWindowWidth() - (strlen("Receiving Peer  [] %% ( Bytes Sent  / s)     \n")
+		// 			+ 5 + strlen(tmp) * 3 + 11);
+			
+		// 	gotoxy(0, 2+i);
+		// 	printf("Receiving Peer %d [", i+1);
+		// 	printBar(bar_width, snd_percent);
+		// 	printf("] %3.2lf%% (%d Bytes Sent / %.2lfs)     \n", 100.0 * snd_percent, size_per_recv, sec);
+		// }
+        
+		// gotoxy(0, clnt_cnt+2);
+
+		if (cur_size >= file_size) {
+			// gotoxy(0, recv_cnt+3);
+			printf("cur_size: %d, file_size: %d\n", cur_size, file_size);
+            break;
+        }
+    }
+	EnableCursor(1);
+
+    return NULL;
+}
