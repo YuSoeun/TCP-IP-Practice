@@ -22,10 +22,12 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <pthread.h>
+
 #include "Console.h"
 #include "client_server.h"
 #include "socket.h"
 #include "file.h"
+#include "progress.h"
 
 void * acceptReceiver(void * arg);
 void * connectReceiver(void * arg);
@@ -43,6 +45,8 @@ int * recv_socks;
 
 SocketInfo ** other_recv_info;
 pthread_mutex_t clnt_mutx, remain_mutx;
+SendInfo * snd_info;
+RecvInfo ** rcv_info;
 
 Segment ** segment;
 int seg_size, total_seg;
@@ -111,7 +115,7 @@ int client(int listen_port, char * ip, int port)
     pthread_mutex_lock(&clnt_mutx);
     recv_socks = realloc(recv_socks, sizeof(int) * total_recv);
     pthread_mutex_unlock(&clnt_mutx);
-    printf("total_recv: %d\n", total_recv);
+    // printf("total_recv: %d\n", total_recv);
 
     read(serv_sock, &recv_num, sizeof(int));
     cnct_thread = (pthread_t *)malloc(sizeof(recv_num) * recv_num);
@@ -133,16 +137,17 @@ int client(int listen_port, char * ip, int port)
     }
     
     // 파일 이름, segment 총 수 받기
-    int fname_size;
+    int fname_size, file_size;
     char * filename;
 
     read(serv_sock, &fname_size, sizeof(int));
     filename = malloc(fname_size);
     recvStr(serv_sock, filename, fname_size);
+    read(serv_sock, &file_size, sizeof(file_size));
     read(serv_sock, &seg_size, sizeof(int));
-    printf("segment size: %d\n", seg_size);
+    // printf("segment size: %d\n", seg_size);
     read(serv_sock, &total_seg, sizeof(int));
-    printf("전체 segment 개수: %d\n", total_seg);
+    // printf("전체 segment 개수: %d\n", total_seg);
 
     // connect + accept 일정 개수 했는지 확인
     while (recv_cnt < total_recv-1) {;}
@@ -162,13 +167,23 @@ int client(int listen_port, char * ip, int port)
     }
 
     // Sender에게 init complete all_seg_flag 보내기
-    printf("Init complete\n");
+    // printf("Init complete\n");
     memcpy(msg, "Init complete", BUF_SIZE);
     write(serv_sock, msg, BUF_SIZE);
     
     // sender로부터 receive해야할 개수 읽기
     read(serv_sock, &seg2recv_num, sizeof(int));
-    printf("sender로부터 receive해야할 개수: %d\n\n", seg2recv_num);
+    // printf("sender로부터 receive해야할 개수: %d\n\n", seg2recv_num);
+
+    // sendInfo, recvInfo init
+    snd_info = (SendInfo *)malloc(sizeof(SendInfo));
+	setSendInfo(snd_info, file_size, 0, 0.0);
+	
+	rcv_info = (RecvInfo **)malloc(sizeof(RecvInfo *) * recv_cnt);
+	for (int i = 0; i < recv_cnt; i++) {
+		rcv_info[i] = (RecvInfo *)malloc(sizeof(RecvInfo));
+		setRecvInfo(rcv_info[i], seg2recv_num, 0, 0, 0.0);
+	}
     
     // 다른 Receiver segment read하고 write하는 thread 열어놓기
     remain_seg_num = total_seg - seg2recv_num;
@@ -185,19 +200,19 @@ int client(int listen_port, char * ip, int port)
 
     // Sender로부터 segmaent 받아오기
     getSegmentFromSock(serv_sock, seg2recv_num);
-    printf("\nSender로 부터 모든 socket을 받았습니다.\n");
+    // printf("\nSender로 부터 모든 socket을 받았습니다.\n");
 
     // 다른 recv에게 seg 다 보냈는지 출력
     for (int i = 0; i < recv_cnt; i++) {
         pthread_join(snd_thread[i], &thread_return);
-        printf("\n%d번째 receiver에게 모든 segment을 보냈습니다.\n", i);
+        // printf("\n%d번째 receiver에게 모든 segment을 보냈습니다.\n", i);
     }
 
     pthread_join(write_file_thread, &thread_return);
-    printf("\n파일에 받아온 정보를 다 적었습니다.\n");
+    // printf("\n파일에 받아온 정보를 다 적었습니다.\n");
 
     pthread_detach(rcv_thread);
-    printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
+    // printf("\n다른 receiver로부터 모든 segment를 받았습니다.\n");
 
     // free segment
     for (int i = 0; i < total_seg; i++) {
@@ -206,6 +221,7 @@ int client(int listen_port, char * ip, int port)
     }
     free(segment);
     
+    // TODO: sendInfo, recvInfo 사용 시 필요없는 코드 정리
     // TODO: Receiver 진행상황 console 출력
     
     close(clnt_sock);
@@ -227,7 +243,7 @@ void * acceptReceiver(void * arg)
         } else {
             pthread_mutex_lock(&clnt_mutx);
             recv_socks[recv_cnt++] = recv_sock;
-            printf("accept receiver: %d(recv_cnt: %d)\n", *clnt_sock, recv_cnt);
+            // printf("accept receiver: %d(recv_cnt: %d)\n", *clnt_sock, recv_cnt);
             pthread_mutex_unlock(&clnt_mutx);
         }
     }
@@ -236,7 +252,7 @@ void * acceptReceiver(void * arg)
 /* connect receiver thread */
 void * connectReceiver(void * arg)
 {
-    SocketInfo * recv_info = (SocketInfo  *)arg;
+    SocketInfo * rcv_info = (SocketInfo  *)arg;
     int recv_sock, recv_adr_sz;
     struct sockaddr_in recv_addr;
 
@@ -246,15 +262,15 @@ void * connectReceiver(void * arg)
     
     memset(&recv_addr, 0, sizeof(recv_addr));
     recv_addr.sin_family = AF_INET;
-    recv_addr.sin_addr.s_addr = inet_addr(recv_info->ip);
-    recv_addr.sin_port = htons(recv_info->listen_port);
+    recv_addr.sin_addr.s_addr = inet_addr(rcv_info->ip);
+    recv_addr.sin_port = htons(rcv_info->listen_port);
 
     if (connect(recv_sock, (struct sockaddr *)&recv_addr, sizeof(recv_addr)) == -1) {
         perror("connect() error");
     } else {
         pthread_mutex_lock(&clnt_mutx);
         recv_socks[recv_cnt++] = recv_sock;
-        printf("connect to ip:%s, port:%d(recv_cnt: %d)\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port), recv_cnt);
+        // printf("connect to ip:%s, port:%d(recv_cnt: %d)\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port), recv_cnt);
         pthread_mutex_unlock(&clnt_mutx);
     }
 }

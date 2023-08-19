@@ -149,10 +149,11 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 
 		// 파일 이름, segment 총 수 보내주기
 		int fname_size = (int)strlen(filename) + 1;
-		write(clnt_socks[i], &fname_size, sizeof(int));
+		write(clnt_socks[i], &fname_size, sizeof(fname_size));
 		write(clnt_socks[i], filename, fname_size);
-		write(clnt_socks[i], &seg_size, sizeof(int));
-		write(clnt_socks[i], &total_seg, sizeof(int));
+		write(clnt_socks[i], &file_size, sizeof(file_size));
+		write(clnt_socks[i], &seg_size, sizeof(seg_size));
+		write(clnt_socks[i], &total_seg, sizeof(total_seg));
 	}
 
 	// init complete 다 받았는지 확인
