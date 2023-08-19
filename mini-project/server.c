@@ -106,8 +106,10 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 	recv_info = (RecvInfo **)malloc(sizeof(RecvInfo *) * recv_num);
 	for (int i = 0; i < recv_num; i++) {
 		int recv_total_seg = seg_num;
-		if (remain > 0)
+		if (remain > 0) {
 			recv_total_seg++;
+			remain--;
+		}
 
 		recv_info[i] = (RecvInfo *)malloc(sizeof(RecvInfo));
 		setRecvInfo(recv_info[i], recv_total_seg, 0, 0, 0.0);
