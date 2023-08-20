@@ -147,6 +147,12 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 				writeSocketInfo(clnt_socks[i], recv_sokt_info[j]);
 		}
 
+		for (int j = 0; j < recv_num ; j++) {
+			if (i != j) {
+				write(clnt_socks[i], &recv_sokt_info[j]->id, sizeof(int));
+			}
+		}
+
 		// 파일 이름, segment 총 수 보내주기
 		int fname_size = (int)strlen(filename) + 1;
 		write(clnt_socks[i], &fname_size, sizeof(fname_size));

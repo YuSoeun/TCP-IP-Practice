@@ -40,9 +40,10 @@ void * printRecvProgress();
 
 int recv_cnt = 0;
 int recv_num;                   // connect를 요청해야할 thread 수
-int total_recv = __INT_MAX__;   // 총 recever 수
+int total_recv = __INT_MAX__;   // 총 receiver 수
 int remain_seg_num;             // segment를 더 받아야 할 개수
 int * recv_socks;
+int * recv_ids;
 
 SocketInfo ** other_recv_info;
 pthread_mutex_t clnt_mutx, remain_mutx;
@@ -131,7 +132,12 @@ int client(int listen_port, char * ip, int port)
         readSocketInfo(serv_sock, other_recv_info[i]);
         pthread_create(&cnct_thread[i], NULL, connectReceiver, (void *)other_recv_info[i]);
     }
-    
+
+    recv_ids = (int *)malloc(sizeof(int) * total_recv);
+    for (int i = 0; i < total_recv-1; i++) {
+        read(serv_sock, &recv_ids[i], sizeof(int));
+    }
+
     // 파일 이름, segment 총 수 받기
     int fname_size, file_size;
     char * filename;
@@ -142,6 +148,8 @@ int client(int listen_port, char * ip, int port)
     read(serv_sock, &file_size, sizeof(file_size));
     read(serv_sock, &seg_size, sizeof(int));
     read(serv_sock, &total_seg, sizeof(int));
+
+
 
     // connect + accept 일정 개수 했는지 확인
     while (recv_cnt < total_recv-1) {;}
@@ -403,7 +411,7 @@ void * printRecvProgress()
             if (sec > 0)
 			    size_per_sec = (double)size_per_recv / sec;
 
-			printf("From Receiving Peer #%d : %.2lf Mbps (%d Bytes Sent / %.2lfs)     \n", i+1, size_per_sec, size_per_recv, sec);
+			printf("From Receiving Peer #%d : %.2lf Mbps (%d Bytes Sent / %.2lfs)     \n", recv_ids[i], size_per_sec, size_per_recv, sec);
 			cur_size += size_per_recv;
             total_sec += sec;
 		}
