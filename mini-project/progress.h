@@ -5,7 +5,7 @@
 
 typedef struct sendInfo
 {
-	int file_size;			// send/recv한 전체 file size
+	int file_size;			// 전체 file size
 	int cur_size;			// 현재 send/recv한 파일 사이즈
 	double time_spent;	    // 소요된 시간
 } SendInfo;
@@ -18,7 +18,7 @@ typedef struct recvInfo
 	double time_spent;	    // 소요된 시간
 } RecvInfo;
 
-void setSendInfo(SendInfo * info, int file_size, int size, float time);
+void setSendInfo(SendInfo * info, int file_size, int size, double time);
 void updateSendInfo(SendInfo * info, int size, double time);
 void getSendInfo(SendInfo * info, int* file_size, int* size, double* time);
 

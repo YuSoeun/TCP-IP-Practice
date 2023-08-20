@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "progress.h"
 
-void setSendInfo(SendInfo * info, int file_size, int size, float time)
+void setSendInfo(SendInfo * info, int file_size, int size, double time)
 {
     info->file_size = file_size;
     info->cur_size = size;

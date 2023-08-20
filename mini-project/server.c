@@ -238,7 +238,7 @@ void * printSendProgress()
 			size_per_sec = (double)cur_size / sec;
 
 		// print sender progress bar
-		sprintf(tmp, "%d", cur_size);
+		sprintf(tmp, "%d", file_size);
 		bar_width = getWindowWidth() - (strlen("Sending Peer [] %% ( /  )  Mbps (s)     \n")
 				+ 5 + strlen(tmp) * 3 + 11);
 
@@ -251,15 +251,12 @@ void * printSendProgress()
 		// print receiver progress bar
 		for (int i = 0; i < clnt_cnt; i++) {
 			getRecvInfo(recv_info[i], &total_seg, &seg_num, &size_per_recv, &sec);
-			snd_percent = (double)seg_num / (double)total_seg;
-			sprintf(tmp, "%d", total_seg);
-			bar_width = getWindowWidth() - (strlen("Receiving Peer  [] %% ( Bytes Sent / s)     \n")
-					+ 5 + strlen(tmp) * 3 + 11);
+			if (sec > 0)
+				size_per_sec = (double)size_per_recv / sec;
 			
 			gotoxy(0, 2+i);
-			printf("Receiving Peer %d [", i+1);
-			printBar(bar_width, snd_percent);
-			printf("] %3.2lf%% (%d Bytes Sent / %.2lfs)     \n", 100.0 * snd_percent, size_per_recv, sec);
+			printf("Receiving Peer #%d %.2lf Mbps (%d Bytes Sent / %.2lfs)     \n"
+					, i+1, size_per_sec, size_per_recv, sec);
 		}
         
 		gotoxy(0, clnt_cnt+2);
@@ -267,6 +264,7 @@ void * printSendProgress()
 		if (cur_size >= file_size) {
 			gotoxy(0, clnt_cnt+3);
 			printf("cur_size: %d, file_size: %d\n", cur_size, file_size);
+            EnableCursor(1);
             break;
         }
     }
