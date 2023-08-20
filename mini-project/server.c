@@ -178,13 +178,9 @@ int server(int listen_port, int recv_num, char* filename, int seg_size)
 		updateSendInfo(send_info, segment[i]->size, send_time);
 		updateRecvInfo(recv_info[clnt_index], segment[i]->size, send_time);
 		sleep(0.5);
-		// printf("write to %d seg[%d] %fs\n", clnt_index, send_info->snd_seg_num, send_info->time_spent);
 	}
 	pthread_join(console_thread, &thread_return);
 
-	// for (int i = 0; i < recv_num; i++) {
-	// 	removeDisconnectedClient(clnt_socks[i]);
-	// }
 	close(serv_sock);
 
     return 0;
@@ -198,7 +194,6 @@ void * readClntMsg(void * arg)
 	char msg[BUF_SIZE] = {};
 	
 	recvStr(clnt_sock, msg, BUF_SIZE);
-	// printf("\nreceived msg[%d]: %s\n", clnt_sock, msg);
 
 	return NULL;
 }

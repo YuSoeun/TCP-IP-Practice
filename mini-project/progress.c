@@ -51,6 +51,6 @@ void printBar(int bar_width, double percent)
     
 		for (int i = 0; i < bar_width; i++) {
 			if (i < char_num)	printf("#");
-			else			printf(" ");
+			else			    printf(" ");
 		}
 }

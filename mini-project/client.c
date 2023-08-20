@@ -51,13 +51,12 @@ RecvInfo ** rcv_info;
 
 Segment ** segment;
 int seg_size, total_seg;
-int seg2recv_num;                 // Sender로부터 받아야 할 segment 수
+int seg2recv_num;                // Sender로부터 받아야 할 segment 수
 int * all_seg_flag;              // 전체 segment 써졌는지 표시하는 flag
 int * recv_seg_num;              // sender에게 받은 segment seq 표시
 int * progress;
 int sender_seg_cnt;
 int stored_size;
-// void * printSendProgress();
 
 int client(int listen_port, char * ip, int port)
 {
@@ -109,11 +108,8 @@ int client(int listen_port, char * ip, int port)
 	if (connect(serv_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
 		error_handling("connect() error");
 
-    // 자신 listening port 주기
-    write(serv_sock, &listen_port, sizeof(int));
-
-    // receiver 개수 받기
-    read(serv_sock, &total_recv, sizeof(int));
+    write(serv_sock, &listen_port, sizeof(int));        // 자신 listening port 주기
+    read(serv_sock, &total_recv, sizeof(int));          // receiver 개수 받기
     pthread_mutex_lock(&clnt_mutx);
     recv_socks = realloc(recv_socks, sizeof(int) * total_recv);
     pthread_mutex_unlock(&clnt_mutx);
@@ -215,9 +211,6 @@ int client(int listen_port, char * ip, int port)
     }
     free(segment);
     
-    // TODO: sendInfo, recvInfo 사용 시 필요없는 코드 정리
-    // TODO: Receiver 진행상황 console 출력
-    
     close(clnt_sock);
 
     return 0;
@@ -233,7 +226,7 @@ void * acceptReceiver(void * arg)
 
     while (recv_cnt < total_recv-1) {
         if ((recv_sock = accept(*clnt_sock, (struct sockaddr *)&recv_adr, &recv_adr_sz)) == -1) {
-            // perror("accept error");
+            perror("accept error");
         } else {
             pthread_mutex_lock(&clnt_mutx);
             recv_socks[recv_cnt++] = recv_sock;
@@ -416,21 +409,23 @@ void * printRecvProgress()
 		}
         printf("\n");
 
-        // total recv size, file save size
+        // print total recv size
         if (total_sec > 0)
 			size_per_sec = (double)cur_size / total_sec;
         percent = (double)cur_size / (double)file_size;
-
         sprintf(tmp, "%d", file_size);
         bar_width = getWindowWidth() - (strlen("Total receive size [] %% ( /  Bytes)  Mbps (s)     \n")
-				+ 5 + strlen(tmp) * 3 + 3 + 10);     
+				+ 5 + strlen(tmp) * 3 + 3 + 10);
+
         printf("Total receive size [");
 		printBar(bar_width, percent);
 		printf("] %3.2lf%% (%d / %d Bytes) %.2lf Mbps (%.2lfs)     \n",
 				100.0 * percent, cur_size, file_size, size_per_sec, sec);
 
+        // print file save size
         percent = (double)stored_size / (double)file_size;
         bar_width += strlen("Total receive size") - strlen("File Save");
+        
         printf("File Save [");
 		printBar(bar_width, percent);
 		printf("] %3.2lf%% (%d / %d Bytes)     \n",
