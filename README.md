@@ -1,4 +1,42 @@
-# TCP-IP-Practice
-CCM(MCNL) Summer Study
+## ¹Ì´Ï ÇÁ·ÎÁ§Æ®: TCP/IP ±â¹Ý Åä·»Æ®(Torrent) ½Ã½ºÅÛ ±¸Çö
 
-ìœ¤ì„±ìš°ì˜ TCP/IP ì±…ì„ ë³´ë©° ìŠ¤í„°ë”” í•œ ë‚´ìš©ë“¤ìž…ë‹ˆë‹¤.
+### ÇÁ·ÎÁ§Æ® °³¿ä
+- TCP/IP ¼ÒÄÏ ÇÁ·Î±×·¡¹ÖÀ» È°¿ëÇÏ¿© Åä·»Æ® ¹æ½ÄÀÇ ÆÄÀÏ Àü¼Û ½Ã½ºÅÛÀ» ±¸Ãà
+- Sender°¡ °¡Áø ÆÄÀÏÀ» ¿©·¯ Receiver¿¡°Ô È¿À²ÀûÀ¸·Î ¹èÆ÷ÇÏ´Â ºÐ»ê È¯°æÀ» ±¸Çö
+
+### ±¸Çö ³»¿ë ¹× ÁÖ¿ä ±â´É
+- **¸ÖÆ¼½º·¹µå¸¦ ÀÌ¿ëÇÑ ºñµ¿±â ÆÄÀÏ ¼Û¼ö½Å**
+  - µ¿½Ã¿¡ ´Ù¼öÀÇ Receiver°¡ ÇÏ³ªÀÇ Sender·ÎºÎÅÍ ÆÄÀÏÀ» ´Ù¿î·ÎµåÇÒ ¼ö ÀÖµµ·Ï ¸ÖÆ¼ ½º·¹µå ±¸Á¶ ¼³°è
+  - Thread JoinÀ» È°¿ëÇÏ¿© µ¿±âÈ­ ¹× ¾ÈÁ¤ÀûÀÎ µ¥ÀÌÅÍ ¼Û¼ö½Å º¸Àå
+
+- **¼¼ºÎ ±¸¼º**
+  - Sender (ÆÄÀÏ Á¦°ø ¼­¹ö)
+  - Receiver (ÆÄÀÏ ¼ö½Å Å¬¶óÀÌ¾ðÆ®)
+  - Progress °ü¸® ¸ðµâ (Àü¼Û »óÅÂ ¸ð´ÏÅÍ¸µ ¹× ·Î±× ±â·Ï)
+
+### ÇÙ½É ±¸Çö ±â´É
+- ÆÄÀÏ Àü¼Û ¿äÃ» Ã³¸® ¹× ´ÙÁß Å¬¶óÀÌ¾ðÆ® µ¿½Ã Á¢¼Ó °ü¸®
+- ¼ö½ÅµÈ µ¥ÀÌÅÍÀÇ º´·Ä Ã³¸®¿Í ÆÄÀÏ ÀçÁ¶ÇÕ ±â´É
+  - µ¥ÀÌÅÍ ÆÐÅ¶ ´ÜÀ§·Î ºÐÇÒÇÏ¿© ¼Û¼ö½Å, ÀüÃ¼ ÆÄÀÏÀÇ Á¤È®ÇÑ º¹¿ø °¡´É
+
+- **¿À·ù Ã³¸® ¹× ¾ÈÁ¤¼º °­È­**
+  - ³×Æ®¿öÅ© Àå¾Ö ¹ß»ý ½Ã Àç¿¬°á ¹× µ¥ÀÌÅÍ À¯½Ç ÃÖ¼ÒÈ­ ¹æ¾È Àû¿ë
+  - ÆÐÅ¶ Àü¼Û Áß ¹ß»ý °¡´ÉÇÑ ¿¹¿Ü¸¦ Ã³¸®ÇÏ¿© ÇÁ·Î±×·¥ ¾ÈÁ¤¼º Çâ»ó
+
+### ÇÁ·ÎÁ§Æ® ÁÖ¿ä ±â¼ú
+- ¾ð¾î: C ¾ð¾î
+- ³×Æ®¿öÅ©: TCP/IP ¼ÒÄÏ
+- º´·Ä Ã³¸®: POSIX Thread ¶óÀÌºê·¯¸® »ç¿ë
+
+### ÇÁ·ÎÁ§Æ®¸¦ ÅëÇØ Å°¿î ¿ª·®
+- ³×Æ®¿öÅ© ÇÁ·Î±×·¡¹Ö¿¡ ´ëÇÑ ±âÃÊ ¹× ½ÉÈ­ Áö½Ä ½Àµæ
+- ¸ÖÆ¼ ½º·¹µå¸¦ È°¿ëÇÑ È¿À²ÀûÀÎ ºñµ¿±â Ã³¸® ¿ª·® °­È­
+- ºÐ»ê µ¥ÀÌÅÍ Ã³¸® ¹× Àå¾Ö ´ëÀÀÀ» ÅëÇÑ ¹®Á¦ ÇØ°á ¿ª·® °³¹ß
+
+### È°¿ë °¡´É ±â¼ú Å°¿öµå
+- TCP/IP ¼ÒÄÏ ÇÁ·Î±×·¡¹Ö
+- ¸ÖÆ¼½º·¹µå
+- ºÐ»ê µ¥ÀÌÅÍ Ã³¸®
+- ³×Æ®¿öÅ© Àå¾Ö ´ëÀÀ
+
+
